@@ -65,8 +65,8 @@ public final class UsageScanner {
     /// Readable names for the project folders seen so far.
     public var projectNames: [String: String] {
         var names: [String: String] = [:]
-        for folder in Set(ledger.entries.map(\.project)) {
-            names[folder] = ProjectName.displayName(folder: folder, cwds: cwds[folder] ?? [])
+        for (folder, seen) in cwds {
+            names[folder] = ProjectName.displayName(folder: folder, cwds: seen)
         }
         return names
     }
