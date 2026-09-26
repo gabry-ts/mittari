@@ -67,7 +67,6 @@ struct StatisticsView: View {
                 breakdown("By model", systemImage: "cpu", slices: stats.byModel, total: stats.totals.tokens.total)
             }
         }
-        .frame(minWidth: 760, minHeight: 600)
     }
 
     private func chart(_ stats: UsageStats) -> some View {

@@ -30,8 +30,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let store = SettingsStore()
     let monitor = UsageMonitor()
     private let notifier = Notifier()
-    private var settingsWindow: NSWindow?
-    private var statisticsWindow: NSWindow?
+    private let navigation = Navigation()
+    private var window: NSWindow?
     private var statusItem: StatusItemController?
     private var observedInterval: Double = 0
 
@@ -103,30 +103,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func openSettingsWindow() {
-        NSApp.activate()
-        if let settingsWindow {
-            settingsWindow.makeKeyAndOrderFront(nil)
-            return
-        }
-        let view = SettingsView()
-            .environment(store)
-            .environment(monitor)
-        let window = makeWindow(view, size: NSSize(width: 1000, height: 660), minSize: NSSize(width: 880, height: 560))
-        settingsWindow = window
-        window.makeKeyAndOrderFront(nil)
+        openWindow(.general)
     }
 
     func openStatisticsWindow() {
+        openWindow(.statistics)
+    }
+
+    /// Opens the main window on `pane`, reusing it if it's already open.
+    private func openWindow(_ pane: SettingsView.Pane) {
         NSApp.activate()
-        if let statisticsWindow {
-            statisticsWindow.makeKeyAndOrderFront(nil)
+        navigation.pane = pane
+        if let window {
+            window.makeKeyAndOrderFront(nil)
             return
         }
-        let view = StatisticsView()
+        let view = SettingsView(navigation: navigation)
             .environment(store)
             .environment(monitor)
-        let window = makeWindow(view, size: NSSize(width: 900, height: 760), minSize: NSSize(width: 760, height: 600))
-        statisticsWindow = window
+        let window = makeWindow(view, size: NSSize(width: 1080, height: 760), minSize: NSSize(width: 900, height: 600))
+        self.window = window
         window.makeKeyAndOrderFront(nil)
     }
 
@@ -150,13 +146,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         return window
     }
 
-    /// Closed windows are torn down rather than kept around, so their charts stop
-    /// drawing in the background.
+    /// A closed window is torn down rather than kept around, so its charts stop drawing
+    /// in the background.
     func windowWillClose(_ notification: Notification) {
         guard let window = notification.object as? NSWindow else { return }
         window.contentViewController = nil
-        if window === settingsWindow { settingsWindow = nil }
-        if window === statisticsWindow { statisticsWindow = nil }
+        if window === self.window { self.window = nil }
     }
 }
 

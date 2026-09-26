@@ -1,12 +1,26 @@
 import MittariCore
+import Observation
 import SwiftUI
 
+/// Which page the main window shows, so the popover can open it on a given page.
+@MainActor
+@Observable
+final class Navigation {
+    var pane: SettingsView.Pane?
+
+    init(pane: SettingsView.Pane = .statistics) {
+        self.pane = pane
+    }
+}
+
+/// The main window: statistics first, then every settings page, in one sidebar.
 struct SettingsView: View {
-    @State private var selection: Pane?
+    @Bindable var navigation: Navigation
     /// Models whose price history starts expanded, for snapshots.
     private let expandedModels: Set<String>
 
     enum Pane: String, CaseIterable, Hashable {
+        case statistics
         case general
         case menuBar
         case popover
@@ -16,6 +30,7 @@ struct SettingsView: View {
 
         var title: String {
             switch self {
+            case .statistics: "Statistics"
             case .general: "General"
             case .menuBar: "Menu Bar"
             case .popover: "Popover"
@@ -27,6 +42,7 @@ struct SettingsView: View {
 
         var icon: String {
             switch self {
+            case .statistics: "chart.bar.xaxis"
             case .general: "gearshape"
             case .menuBar: "menubar.rectangle"
             case .popover: "rectangle.stack"
@@ -37,15 +53,18 @@ struct SettingsView: View {
         }
     }
 
-    init(initialSelection: Pane = .general, expandedModels: Set<String> = []) {
-        _selection = State(initialValue: initialSelection)
+    init(navigation: Navigation, expandedModels: Set<String> = []) {
+        self.navigation = navigation
         self.expandedModels = expandedModels
     }
 
     var body: some View {
         NavigationSplitView {
-            List(selection: $selection) {
+            List(selection: $navigation.pane) {
                 Section {
+                    paneRow(.statistics)
+                }
+                Section("Settings") {
                     ForEach([Pane.general, .menuBar, .popover], id: \.self, content: paneRow)
                 }
                 Section("Usage") {
@@ -58,7 +77,7 @@ struct SettingsView: View {
         } detail: {
             detail
         }
-        .frame(minWidth: 880, minHeight: 560)
+        .frame(minWidth: 900, minHeight: 600)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
     }
 
@@ -69,9 +88,9 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var detail: some View {
-        if let selection {
-            paneView(selection)
-                .navigationTitle(selection.title)
+        if let pane = navigation.pane {
+            paneView(pane)
+                .navigationTitle(pane.title)
         } else {
             ContentUnavailableView("Select a Section", systemImage: "sidebar.left")
         }
@@ -80,6 +99,7 @@ struct SettingsView: View {
     @ViewBuilder
     private func paneView(_ pane: Pane) -> some View {
         switch pane {
+        case .statistics: StatisticsView()
         case .general: GeneralView()
         case .menuBar: MenuBarSettingsView()
         case .popover: PopoverSettingsView()

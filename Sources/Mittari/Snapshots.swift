@@ -2,7 +2,7 @@ import AppKit
 import MittariCore
 import SwiftUI
 
-/// `Mittari --render-snapshots <dir>` renders the popover, the statistics window and every
+/// `Mittari --render-snapshots <dir>` renders the popover, statistics and every
 /// settings pane with sample data, in light and dark mode, for review and the README.
 /// `Mittari --render-icon <dir>` writes AppIcon.iconset and AppIcon.icns.
 /// Never reads the real logs or touches the real settings.json.
@@ -23,18 +23,18 @@ enum Snapshots {
             let suffix = dark ? "dark" : "light"
             snapFitting(MenuContent(openStatistics: {}, openSettings: {}).environment(store).environment(monitor),
                         name: "popover-\(suffix)", dark: dark, dir: dir)
-            snapWindow(StatisticsView(range: .week).environment(store).environment(monitor),
-                       name: "statistics-\(suffix)", size: NSSize(width: 900, height: 900), dark: dark, dir: dir)
-            for pane in SettingsView.Pane.allCases {
-                snapWindow(SettingsView(initialSelection: pane, expandedModels: ["claude-opus-5"]).environment(store).environment(monitor),
-                           name: "settings-\(pane.rawValue)-\(suffix)", size: NSSize(width: 1000, height: 660), dark: dark, dir: dir,
+            snapWindow(SettingsView(navigation: Navigation(pane: .statistics)).environment(store).environment(monitor),
+                       name: "statistics-\(suffix)", size: NSSize(width: 1080, height: 980), dark: dark, dir: dir)
+            for pane in SettingsView.Pane.allCases where pane != .statistics {
+                snapWindow(SettingsView(navigation: Navigation(pane: pane), expandedModels: ["claude-opus-5"]).environment(store).environment(monitor),
+                           name: "settings-\(pane.rawValue)-\(suffix)", size: NSSize(width: 1080, height: 700), dark: dark, dir: dir,
                            growToContent: true)
             }
         }
         snapWindow(StatisticsView(range: .day).environment(store).environment(monitor),
-                   name: "statistics-day-light", size: NSSize(width: 900, height: 900), dark: false, dir: dir)
+                   name: "statistics-day-light", size: NSSize(width: 860, height: 980), dark: false, dir: dir)
         snapWindow(StatisticsView(range: .month).environment(store).environment(monitor),
-                   name: "statistics-month-dark", size: NSSize(width: 900, height: 900), dark: true, dir: dir)
+                   name: "statistics-month-dark", size: NSSize(width: 860, height: 980), dark: true, dir: dir)
         snapFitting(MenuContent(openStatistics: {}, openSettings: {}).environment(store).environment(empty),
                     name: "popover-empty-light", dark: false, dir: dir)
 
