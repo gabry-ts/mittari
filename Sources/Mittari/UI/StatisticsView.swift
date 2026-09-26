@@ -39,9 +39,9 @@ struct StatisticsView: View {
             Card {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        CardTitle(title: range == .month ? "Tokens per day" : "Tokens per hour", systemImage: "chart.bar.xaxis")
+                        CardTitle(title: "Tokens per \(unitName)", systemImage: "chart.bar.xaxis")
                         Spacer()
-                        if range != .month {
+                        if range.bucket == .hour {
                             HStack(spacing: 5) {
                                 RoundedRectangle(cornerRadius: 2)
                                     .fill(Theme.amber.opacity(0.18))
@@ -69,9 +69,18 @@ struct StatisticsView: View {
         }
     }
 
+    private var unitName: String {
+        switch range.bucket {
+        case .hour: "hour"
+        case .day: "day"
+        default: "week"
+        }
+    }
+
     private func chart(_ stats: UsageStats) -> some View {
-        let unit: Calendar.Component = range == .month ? .day : .hour
-        let shaded = range == .month ? [] : stats.blocks
+        let unit = range.bucket
+        // Windows only read at hourly resolution; on longer ranges they'd be a solid wash.
+        let shaded = unit == .hour ? stats.blocks : []
         return Chart {
             ForEach(shaded) { block in
                 RectangleMark(
@@ -99,6 +108,7 @@ struct StatisticsView: View {
             AxisMarks(values: .automatic(desiredCount: range == .day ? 8 : 7)) { _ in
                 AxisGridLine()
                 AxisValueLabel(format: range == .day ? .dateTime.hour() : .dateTime.month(.abbreviated).day())
+                    .font(.caption)
             }
         }
         .frame(height: 240)

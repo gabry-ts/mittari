@@ -36,7 +36,7 @@ public final class UsageScanner {
     private var cwds: [String: [String]] = [:]
     private var folderStats: [URL: Int] = [:]
 
-    public init(claudeRoots: [URL], codexRoot: URL?, lookback: TimeInterval = 40 * 86_400) {
+    public init(claudeRoots: [URL], codexRoot: URL?, lookback: TimeInterval = 366 * 86_400) {
         self.claudeRoots = claudeRoots
         self.codexRoot = codexRoot
         self.lookback = lookback

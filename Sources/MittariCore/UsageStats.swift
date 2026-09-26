@@ -3,26 +3,39 @@ import Foundation
 /// Numbers for the Statistics window over one range.
 public struct UsageStats: Sendable {
     public enum Range: String, CaseIterable, Sendable {
-        case day, week, month
+        case day, week, month, quarter, halfYear, year
 
         public var title: String {
             switch self {
             case .day: "24 Hours"
             case .week: "7 Days"
             case .month: "30 Days"
+            case .quarter: "90 Days"
+            case .halfYear: "180 Days"
+            case .year: "1 Year"
             }
         }
 
-        public var duration: TimeInterval {
+        /// Bars are hours up to 7 days, days up to 90 days, weeks beyond.
+        public var bucket: Calendar.Component {
             switch self {
-            case .day: 86_400
-            case .week: 7 * 86_400
-            case .month: 30 * 86_400
+            case .day, .week: .hour
+            case .month, .quarter: .day
+            case .halfYear, .year: .weekOfYear
             }
         }
 
-        /// Bars are hours for the shorter ranges and days for 30 days.
-        public var bucket: Calendar.Component { self == .month ? .day : .hour }
+        /// How many bars the range spans.
+        public var bucketCount: Int {
+            switch self {
+            case .day: 24
+            case .week: 7 * 24
+            case .month: 30
+            case .quarter: 90
+            case .halfYear: 26
+            case .year: 52
+            }
+        }
     }
 
     public struct Bucket: Hashable, Sendable, Identifiable {
@@ -54,8 +67,7 @@ public struct UsageStats: Sendable {
         self.range = range
         let unit = range.bucket
         let end = calendar.dateInterval(of: unit, for: now)?.end ?? now
-        let count = range == .month ? 30 : Int(range.duration / 3600)
-        let start = calendar.date(byAdding: unit, value: -count, to: end) ?? now.addingTimeInterval(-range.duration)
+        let start = calendar.date(byAdding: unit, value: -range.bucketCount, to: end) ?? now
         interval = DateInterval(start: start, end: end)
 
         var buckets: [Date: Bucket] = [:]

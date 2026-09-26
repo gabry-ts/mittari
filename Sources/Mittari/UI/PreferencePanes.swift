@@ -163,8 +163,8 @@ struct DataView: View {
             }
 
             Section {
-                LabeledContent("Claude Code messages", value: "\(monitor.entryCount.formatted()) in the last 40 days")
-                LabeledContent("Codex sessions", value: "\(monitor.report.codex.sessionCount) in the last 40 days")
+                LabeledContent("Claude Code messages", value: "\(monitor.entryCount.formatted()) in the last year")
+                LabeledContent("Codex sessions", value: "\(monitor.report.codex.sessionCount) in the last year")
                 if let last = monitor.lastScan {
                     LabeledContent("Last scan", value: "\(last.formatted(date: .omitted, time: .standard)), full scan took \(String(format: "%.1f", monitor.lastScanDuration)) s")
                 }

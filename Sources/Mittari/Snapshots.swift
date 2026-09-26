@@ -33,6 +33,8 @@ enum Snapshots {
         }
         snapWindow(StatisticsView(range: .day).environment(store).environment(monitor),
                    name: "statistics-day-light", size: NSSize(width: 860, height: 980), dark: false, dir: dir)
+        snapWindow(StatisticsView(range: .year).environment(store).environment(monitor),
+                   name: "statistics-year-light", size: NSSize(width: 860, height: 980), dark: false, dir: dir)
         snapWindow(StatisticsView(range: .month).environment(store).environment(monitor),
                    name: "statistics-month-dark", size: NSSize(width: 860, height: 980), dark: true, dir: dir)
         snapFitting(MenuContent(openStatistics: {}, openSettings: {}).environment(store).environment(empty),

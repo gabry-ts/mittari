@@ -97,4 +97,19 @@ final class UsageReportTests: XCTestCase {
         XCTAssertEqual(month.buckets.count, 30)
         XCTAssertEqual(month.totals.tokens.total, 500)
     }
+
+    func testLongRangesUseDaysAndWeeks() {
+        let now = Timestamp.parse("2026-09-26T12:30:00Z")!
+        let entries = [entry("2026-09-26T09:10:00Z"), entry("2026-06-01T10:00:00Z", tokens: 300), entry("2025-11-02T10:00:00Z", tokens: 50)]
+        let report = UsageReport.build(entries: entries, prices: .defaults, projectNames: [:], codexSessions: [],
+                                       codexFolderExists: false, now: now, calendar: utc)
+        let quarter = UsageStats(report: report, range: .quarter, now: now, calendar: utc)
+        XCTAssertEqual(quarter.buckets.count, 90)
+        XCTAssertEqual(quarter.totals.tokens.total, 100)
+        XCTAssertEqual(UsageStats(report: report, range: .halfYear, now: now, calendar: utc).buckets.count, 26)
+        let year = UsageStats(report: report, range: .year, now: now, calendar: utc)
+        XCTAssertEqual(year.buckets.count, 52)
+        XCTAssertEqual(year.totals.tokens.total, 450)
+        XCTAssertTrue(year.blocks.isEmpty == false)
+    }
 }
