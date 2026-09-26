@@ -7,6 +7,12 @@ public final class UsageScanner {
         public var url: URL
         public var exists: Bool
         public var fileCount: Int
+
+        public init(url: URL, exists: Bool, fileCount: Int) {
+            self.url = url
+            self.exists = exists
+            self.fileCount = fileCount
+        }
     }
 
     public let claudeRoots: [URL]
