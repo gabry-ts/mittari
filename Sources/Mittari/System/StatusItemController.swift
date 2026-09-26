@@ -9,11 +9,12 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let popover = NSPopover()
     private let makeContent: () -> AnyView
-    private let render: () -> StatusContent
+    private let render: () -> [StatusPart]
+    private var shown: [StatusPart]?
 
     /// The popover's view is built on open and dropped on close, so nothing in it keeps
     /// animating while it's hidden.
-    init(content: @escaping () -> AnyView, render: @escaping () -> StatusContent) {
+    init(content: @escaping () -> AnyView, render: @escaping () -> [StatusPart]) {
         self.makeContent = content
         self.render = render
         super.init()
@@ -29,7 +30,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         popover.performClose(nil)
     }
 
-    /// Draws the image and re-arms tracking, so any change to what it reads (settings,
+    /// Draws the title and re-arms tracking, so any change to what it reads (settings,
     /// readings) triggers the next draw.
     private func refresh() {
         let content = withObservationTracking {
@@ -38,16 +39,13 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
             Task { @MainActor in self?.refresh() }
         }
         guard let button = item.button else { return }
-        button.image = content.icon
-        button.imagePosition = switch (content.icon != nil, content.title.isEmpty) {
-        case (true, true): .imageOnly
-        case (true, false): content.iconLeading ? .imageLeading : .imageTrailing
-        case (false, _): .noImage
-        }
-        // Setting the title only when it changes avoids needless relayout.
-        if button.title != content.title {
-            button.attributedTitle = NSAttributedString(string: content.title, attributes: [.font: StatusImage.font])
-        }
+        // Rebuilding the title only when it changes avoids needless relayout.
+        guard content != shown else { return }
+        shown = content
+        button.image = nil
+        button.imagePosition = .noImage
+        button.attributedTitle = StatusImage.attributedTitle(content)
+        button.setAccessibilityLabel("Mittari")
     }
 
     @objc private func toggle() {

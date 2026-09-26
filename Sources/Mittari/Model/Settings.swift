@@ -5,14 +5,18 @@ import MittariCore
 enum StatusElement: String, Codable, CaseIterable, Hashable {
     case gauge
     case percent
+    case weekGauge
+    case weekPercent
     case resetTime
     case tokensToday
     case costToday
 
     var title: String {
         switch self {
-        case .gauge: "Ring gauge"
-        case .percent: "5-hour window %"
+        case .gauge: "5-hour ring"
+        case .percent: "5-hour %"
+        case .weekGauge: "Weekly ring"
+        case .weekPercent: "Weekly %"
         case .resetTime: "Time to reset"
         case .tokensToday: "Tokens today"
         case .costToday: "Cost today"
@@ -23,6 +27,8 @@ enum StatusElement: String, Codable, CaseIterable, Hashable {
         switch self {
         case .gauge: "gauge.with.dots.needle.33percent"
         case .percent: "percent"
+        case .weekGauge: "circle.dashed"
+        case .weekPercent: "calendar"
         case .resetTime: "timer"
         case .tokensToday: "number"
         case .costToday: "dollarsign"

@@ -193,6 +193,7 @@ struct PopoverSettingsView: View {
 private struct StatusChip: View {
     @Environment(SettingsStore.self) private var store
     @Environment(UsageMonitor.self) private var monitor
+    @Environment(\.colorScheme) private var colorScheme
     let item: StatusElement
     let isDragging: Bool
     @State private var isHovering = false
@@ -212,12 +213,17 @@ private struct StatusChip: View {
     @ViewBuilder
     private var content: some View {
         let gauge = Gauge(report: monitor.report, limits: store.settings.limits, now: monitor.now)
+        let tint: NSColor = colorScheme == .dark ? .white : .black
         switch item {
         case .gauge:
-            Image(nsImage: StatusImage.ring(percent: gauge.block == nil ? 0 : gauge.fiveHourPercent ?? 0, level: gauge.level))
-                .renderingMode(gauge.level == .normal ? .template : .original)
+            Image(nsImage: StatusImage.ring(percent: gauge.block == nil ? 0 : gauge.fiveHourPercent ?? 0, level: gauge.level, tint: tint))
         case .percent:
-            Text(verbatim: Gauge.percentText(gauge.fiveHourPercent))
+            Text(verbatim: "5h " + Gauge.percentText(gauge.block == nil ? 0 : gauge.fiveHourPercent))
+        case .weekGauge:
+            Image(nsImage: StatusImage.ring(percent: gauge.weekPercent ?? 0,
+                                            level: Gauge.level(gauge.weekPercent, limits: store.settings.limits), tint: tint))
+        case .weekPercent:
+            Text(verbatim: "7d " + Gauge.percentText(gauge.weekPercent))
         case .resetTime:
             Text(verbatim: gauge.timeToReset(now: monitor.now).map(Format.duration) ?? "–")
         case .tokensToday:

@@ -42,7 +42,7 @@ enum Snapshots {
         var warning = Settings()
         warning.limits.mode = .custom
         warning.limits.fiveHourTokens = Int(Double(monitor.report.currentBlock?.tokens.total ?? 1) / 0.82)
-        warning.menuBar.items = [.gauge, .percent, .resetTime, .tokensToday, .costToday]
+        warning.menuBar.items = [.gauge, .percent, .weekGauge, .weekPercent, .resetTime, .costToday]
         let warningStore = SettingsStore(settings: warning)
         snapFitting(MenuContent(openStatistics: {}, openSettings: {}).environment(warningStore).environment(monitor),
                     name: "popover-warning-dark", dark: true, dir: dir)
@@ -87,17 +87,16 @@ enum Snapshots {
     private static func renderStatusItems(_ stores: [SettingsStore], monitor: UsageMonitor, to url: URL) {
         let scale: CGFloat = 3
         let rows = stores.flatMap { store in [(store, false), (store, true)] }
-        let width: CGFloat = 320
+        let width: CGFloat = 420
         let rowHeight: CGFloat = 26
         let image = NSImage(size: NSSize(width: width, height: rowHeight * CGFloat(rows.count)), flipped: true) { _ in
             for (index, row) in rows.enumerated() {
                 let y = CGFloat(index) * rowHeight
                 (row.1 ? NSColor(white: 0.16, alpha: 1) : NSColor(white: 0.93, alpha: 1)).setFill()
                 NSRect(x: 0, y: y, width: width, height: rowHeight).fill()
-                if let item = StatusImage.render(store: row.0, monitor: monitor, textColor: row.1 ? .white : .black) {
-                    item.draw(in: NSRect(x: width - item.size.width - 12, y: y + (rowHeight - item.size.height) / 2,
-                                         width: item.size.width, height: item.size.height))
-                }
+                let item = StatusImage.render(StatusImage.parts(store: row.0, monitor: monitor), textColor: row.1 ? .white : .black)
+                item.draw(in: NSRect(x: width - item.size.width - 12, y: y + (rowHeight - item.size.height) / 2,
+                                     width: item.size.width, height: item.size.height))
             }
             return true
         }

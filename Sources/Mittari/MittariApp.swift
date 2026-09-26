@@ -56,7 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 .environment(monitor)
             )
         } render: { [store, monitor] in
-            StatusImage.content(store: store, monitor: monitor)
+            StatusImage.parts(store: store, monitor: monitor)
         }
 
         monitor.onUpdate = { [weak self] in self?.checkThresholds() }

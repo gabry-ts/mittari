@@ -9,21 +9,19 @@ struct MenuBarLabel: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        if let image = StatusImage.render(store: store, monitor: monitor, textColor: colorScheme == .dark ? .white : .black) {
-            Image(nsImage: image)
-        }
+        Image(nsImage: StatusImage.render(StatusImage.parts(store: store, monitor: monitor),
+                                          textColor: colorScheme == .dark ? .white : .black))
     }
 }
 
-/// What the status item shows: readings as real menu bar text, so they match the clock
-/// and other system items exactly, and the ring gauge as an image.
-struct StatusContent {
-    var icon: NSImage?
-    /// Whether the icon sits before the text; the text is kept together.
-    var iconLeading = true
-    var title = ""
+/// One piece of the status item: a ring gauge or a reading.
+enum StatusPart: Equatable {
+    case ring(percent: Double, level: Gauge.Level)
+    case text(String)
 }
 
+/// What the status item shows. Everything is one attributed title, readings as real menu
+/// bar text so they match the clock and other system items, rings as inline images.
 @MainActor
 enum StatusImage {
     /// The system menu bar font, with fixed-width digits so readings don't jitter.
@@ -38,40 +36,70 @@ enum StatusImage {
         return NSFont(descriptor: descriptor, size: base.pointSize) ?? base
     }()
 
-    private static let separator = "  "
-
     /// Reads every observable input up front, so observation tracking around this call
     /// sees them all.
-    static func content(store: SettingsStore, monitor: UsageMonitor) -> StatusContent {
+    static func parts(store: SettingsStore, monitor: UsageMonitor) -> [StatusPart] {
         let settings = store.settings
         let report = monitor.report
         let now = monitor.now
         let gauge = Gauge(report: report, limits: settings.limits, now: now)
         let items = settings.menuBar.displayedItems
-        let texts: [String] = items.compactMap { item in
+        // With both percentages showing, label them so they can't be confused.
+        let labelled = items.contains(.percent) && items.contains(.weekPercent)
+        let fiveHour = gauge.block == nil ? 0 : gauge.fiveHourPercent
+        let weekLevel = Gauge.level(gauge.weekPercent, limits: settings.limits)
+        return items.map { item in
             switch item {
-            case .gauge: nil
-            case .percent: Gauge.percentText(gauge.fiveHourPercent)
-            case .resetTime: gauge.timeToReset(now: now).map(Format.duration) ?? "–"
-            case .tokensToday: Format.tokens(report.today.tokens.total)
-            case .costToday: report.today.isEmpty ? "$0.00" : Format.cost(report.today.costIsPartial && report.today.cost == 0 ? nil : report.today.cost)
+            case .gauge: .ring(percent: fiveHour ?? 0, level: gauge.level)
+            case .percent: .text((labelled ? "5h " : "") + Gauge.percentText(fiveHour))
+            case .weekGauge: .ring(percent: gauge.weekPercent ?? 0, level: weekLevel)
+            case .weekPercent: .text((labelled ? "7d " : "") + Gauge.percentText(gauge.weekPercent))
+            case .resetTime: .text(gauge.timeToReset(now: now).map(Format.duration) ?? "–")
+            case .tokensToday: .text(Format.tokens(report.today.tokens.total))
+            case .costToday: .text(report.today.cost == 0 && report.today.costIsPartial ? "—" : Format.cost(report.today.cost))
             }
         }
-        let iconIndex = items.firstIndex(of: .gauge)
-        return StatusContent(
-            icon: iconIndex == nil ? nil : ring(percent: gauge.block == nil ? 0 : gauge.fiveHourPercent ?? 0, level: gauge.level),
-            iconLeading: iconIndex == 0,
-            title: texts.joined(separator: separator)
-        )
     }
 
-    /// A ring filled to `percent`. A template image while normal, so it follows the menu
-    /// bar's color; orange or red once a threshold is crossed.
-    static func ring(percent: Double, level: Gauge.Level) -> NSImage {
+    /// The title for the status item. Without `textColor`, text and normal rings follow the
+    /// menu bar's own color; rings turn orange or red once a threshold is crossed.
+    static func attributedTitle(_ parts: [StatusPart], textColor: NSColor? = nil) -> NSAttributedString {
+        var attributes: [NSAttributedString.Key: Any] = [.font: font]
+        if let textColor { attributes[.foregroundColor] = textColor }
+        let title = NSMutableAttributedString()
+        var previous: StatusPart?
+        for part in parts {
+            if let previous {
+                // A ring hugs the reading after it; readings keep a wider gap.
+                let gap = if case .ring = previous, case .text = part { " " } else { "  " }
+                title.append(NSAttributedString(string: gap, attributes: attributes))
+            }
+            switch part {
+            case .text(let text):
+                title.append(NSAttributedString(string: text, attributes: attributes))
+            case .ring(let percent, let level):
+                let image = ring(percent: percent, level: level, tint: textColor)
+                let attachment = NSTextAttachment()
+                attachment.image = image
+                attachment.bounds = CGRect(x: 0, y: ((font.capHeight - image.size.height) / 2).rounded(),
+                                           width: image.size.width, height: image.size.height)
+                let ringString = NSMutableAttributedString(attachment: attachment)
+                ringString.addAttributes(attributes, range: NSRange(location: 0, length: ringString.length))
+                title.append(ringString)
+            }
+            previous = part
+        }
+        return title
+    }
+
+    /// A ring filled to `percent`. While normal it takes `tint`, or the label color of
+    /// wherever it is drawn; orange or red once a threshold is crossed.
+    static func ring(percent: Double, level: Gauge.Level, tint: NSColor? = nil) -> NSImage {
         let side = (font.pointSize + 3).rounded()
         let image = NSImage(size: NSSize(width: side, height: side), flipped: false) { rect in
+            // Resolved at draw time, so the default follows the menu bar's appearance.
             let color: NSColor = switch level {
-            case .normal: .black
+            case .normal: tint ?? .labelColor
             case .warning: NSColor(Theme.warning)
             case .critical: NSColor(Theme.critical)
             }
@@ -81,7 +109,7 @@ enum StatusImage {
             let track = NSBezierPath()
             track.appendArc(withCenter: center, radius: radius, startAngle: 0, endAngle: 360)
             track.lineWidth = lineWidth
-            color.withAlphaComponent(level == .normal ? 0.3 : 0.35).setStroke()
+            color.withAlphaComponent(0.3).setStroke()
             track.stroke()
             let fraction = min(max(percent / 100, 0), 1)
             if fraction > 0 {
@@ -94,41 +122,17 @@ enum StatusImage {
             }
             return true
         }
-        image.isTemplate = level == .normal
-        image.accessibilityDescription = "Mittari"
+        image.accessibilityDescription = "Usage gauge"
         return image
     }
 
-    /// The whole status item as one image, for the preview in settings.
-    static func render(store: SettingsStore, monitor: UsageMonitor, textColor: NSColor) -> NSImage? {
-        let content = content(store: store, monitor: monitor)
-        let attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: textColor]
-        let titleSize = content.title.isEmpty ? .zero : (content.title as NSString).size(withAttributes: attributes)
-        let iconSide = content.icon?.size.width ?? 0
-        let gap: CGFloat = content.icon != nil && !content.title.isEmpty ? 4 : 0
-        let height = max(titleSize.height, iconSide)
-        let size = NSSize(width: ceil(iconSide + gap + titleSize.width), height: ceil(height))
-        let image = NSImage(size: size, flipped: false) { _ in
-            let textX = content.iconLeading ? iconSide + gap : 0
-            let iconX = content.iconLeading ? 0 : titleSize.width + gap
-            if let icon = content.icon {
-                let iconRect = NSRect(x: iconX, y: (height - iconSide) / 2, width: iconSide, height: iconSide)
-                if icon.isTemplate {
-                    // Tint the template like the menu bar would.
-                    let tinted = NSImage(size: icon.size, flipped: false) { r in
-                        icon.draw(in: r)
-                        textColor.set()
-                        r.fill(using: .sourceAtop)
-                        return true
-                    }
-                    tinted.draw(in: iconRect)
-                } else {
-                    icon.draw(in: iconRect)
-                }
-            }
-            (content.title as NSString).draw(at: NSPoint(x: textX, y: (height - titleSize.height) / 2), withAttributes: attributes)
+    /// The whole status item as one image, for previews.
+    static func render(_ parts: [StatusPart], textColor: NSColor) -> NSImage {
+        let title = attributedTitle(parts, textColor: textColor)
+        let size = title.size()
+        return NSImage(size: NSSize(width: ceil(size.width), height: ceil(size.height)), flipped: false) { _ in
+            title.draw(at: .zero)
             return true
         }
-        return image
     }
 }
