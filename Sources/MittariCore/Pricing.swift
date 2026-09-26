@@ -62,7 +62,11 @@ public struct ModelPricing: Codable, Hashable, Sendable, Identifiable {
     /// The period in effect at `date`. When periods overlap, the one that started last wins,
     /// so adding "new prices from <date>" is enough to supersede an open-ended period.
     public func period(at date: Date) -> PricePeriod? {
-        periods.filter { $0.contains(date) }.max { ($0.from ?? .distantPast) < ($1.from ?? .distantPast) }
+        var best: PricePeriod?
+        for period in periods where period.contains(date) {
+            if best == nil || (period.from ?? .distantPast) > (best?.from ?? .distantPast) { best = period }
+        }
+        return best
     }
 }
 

@@ -63,16 +63,26 @@ public struct UsageStats: Sendable {
         var projects: [String: Slice] = [:]
         var models: [String: Slice] = [:]
         var sessions: [String: Session] = [:]
-        for entry in report.entries where interval.contains(entry.date) {
+        var modelIDs: [String: String] = [:]
+        // Entries are sorted, so the calendar is only asked when a new bucket starts.
+        var bucket = DateInterval(start: .distantPast, duration: 0)
+        var hour = DateInterval(start: .distantPast, duration: 0)
+        let first = report.entries.partitioningIndex { $0.date >= start }
+        for entry in report.entries[first...] where interval.contains(entry.date) {
             totals.add(entry)
-            let key = calendar.dateInterval(of: unit, for: entry.date)?.start ?? entry.date
-            buckets[key, default: Bucket(start: key)].tokens += entry.tokens.total
-            buckets[key]?.cost += entry.cost ?? 0
-            let hour = calendar.dateInterval(of: .hour, for: entry.date)?.start ?? entry.date
-            hours[hour, default: Bucket(start: hour)].tokens += entry.tokens.total
-            hours[hour]?.cost += entry.cost ?? 0
+            if !(entry.date >= bucket.start && entry.date < bucket.end) {
+                bucket = calendar.dateInterval(of: unit, for: entry.date) ?? DateInterval(start: entry.date, duration: 3600)
+            }
+            buckets[bucket.start, default: Bucket(start: bucket.start)].tokens += entry.tokens.total
+            buckets[bucket.start]?.cost += entry.cost ?? 0
+            if !(entry.date >= hour.start && entry.date < hour.end) {
+                hour = calendar.dateInterval(of: .hour, for: entry.date) ?? DateInterval(start: entry.date, duration: 3600)
+            }
+            hours[hour.start, default: Bucket(start: hour.start)].tokens += entry.tokens.total
+            hours[hour.start]?.cost += entry.cost ?? 0
             projects[entry.project, default: Slice(id: entry.project, name: report.projectName(entry.project))].totals.add(entry)
-            let model = ModelName.normalize(entry.model)
+            let model = modelIDs[entry.model] ?? ModelName.normalize(entry.model)
+            modelIDs[entry.model] = model
             models[model, default: Slice(id: model, name: ModelName.display(model))].totals.add(entry)
             if !entry.session.isEmpty {
                 if var session = sessions[entry.session] {
@@ -99,5 +109,19 @@ public struct UsageStats: Sendable {
         byModel = models.values.sorted { $0.totals.tokens.total > $1.totals.tokens.total }
         peakHour = hours.values.max { $0.tokens < $1.tokens }
         longestSession = sessions.values.max { $0.duration < $1.duration }
+    }
+}
+
+extension Array {
+    /// Index of the first element matching `predicate`, for arrays where it is false for a
+    /// prefix and true for the rest (binary search).
+    func partitioningIndex(where predicate: (Element) -> Bool) -> Int {
+        var low = 0
+        var high = count
+        while low < high {
+            let mid = (low + high) / 2
+            if predicate(self[mid]) { high = mid } else { low = mid + 1 }
+        }
+        return low
     }
 }

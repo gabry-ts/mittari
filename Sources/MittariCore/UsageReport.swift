@@ -118,6 +118,8 @@ public struct UsageReport: Sendable {
         var models: [String: Slice] = [:]
         var projects: [String: Slice] = [:]
         var days: [Date: Int] = [:]
+        var modelIDs: [String: String] = [:]
+        var day = DateInterval(start: .distantPast, duration: 0)
         for entry in report.entries {
             if entry.date >= startOfToday {
                 report.today.add(entry)
@@ -125,11 +127,18 @@ public struct UsageReport: Sendable {
             }
             if entry.date >= weekStart {
                 report.week.add(entry)
-                let id = ModelName.normalize(entry.model)
+                let id = modelIDs[entry.model] ?? ModelName.normalize(entry.model)
+                modelIDs[entry.model] = id
                 models[id, default: Slice(id: id, name: ModelName.display(id))].totals.add(entry)
             }
             if entry.date >= monthStart { report.month.add(entry) }
-            if entry.date >= thirtyDaysAgo { days[calendar.startOfDay(for: entry.date), default: 0] += entry.tokens.total }
+            if entry.date >= thirtyDaysAgo {
+                // Entries are sorted, so the calendar is asked once per day, not per entry.
+                if !(entry.date >= day.start && entry.date < day.end) {
+                    day = calendar.dateInterval(of: .day, for: entry.date) ?? DateInterval(start: entry.date, duration: 86_400)
+                }
+                days[day.start, default: 0] += entry.tokens.total
+            }
         }
         report.modelsWeek = models.values.sorted { $0.totals.tokens.total > $1.totals.tokens.total }
         report.projectsToday = projects.values.sorted { $0.totals.tokens.total > $1.totals.tokens.total }
