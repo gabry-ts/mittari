@@ -255,12 +255,18 @@ private struct MenuBarPreview: View {
             .frame(height: 30)
             .background(.primary.opacity(0.06), in: .rect(cornerRadius: 10))
             if showsPopover {
-                MenuContent(openStatistics: {}, openSettings: {})
-                    .clipShape(.rect(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.separator))
-                    .shadow(color: .black.opacity(0.15), radius: 12, y: 6)
-                    .allowsHitTesting(false)
+                // Scrolls on its own, so a tall popover never forces the window taller.
+                ScrollView {
+                    MenuContent(openStatistics: {}, openSettings: {})
+                        .clipShape(.rect(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.separator))
+                        .shadow(color: .black.opacity(0.15), radius: 12, y: 6)
+                        .allowsHitTesting(false)
+                        .padding(.vertical, 12)
+                }
+                .scrollIndicators(.never)
             }
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 20)
         .padding(.top, 88)
