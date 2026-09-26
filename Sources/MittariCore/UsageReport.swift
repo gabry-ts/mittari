@@ -54,9 +54,9 @@ public struct UsageReport: Sendable {
     public var entries: [UsageEntry] = []
     public var blocks: [UsageBlock] = []
     public var currentBlock: UsageBlock?
-    /// Largest 5-hour window in the last 30 days, in tokens.
+    /// Largest earlier 5-hour window in the last 30 days, in tokens.
     public var busiestBlockTokens = 0
-    /// Largest rolling 7 days in the last 30 days, in tokens.
+    /// Largest 7 calendar days in the last 30, before the current week, in tokens.
     public var busiestWeekTokens = 0
     public var today = Totals()
     public var week = Totals()
@@ -110,7 +110,10 @@ public struct UsageReport: Sendable {
         report.blocks = Blocks.compute(report.entries)
         report.currentBlock = Blocks.current(in: report.blocks, now: now)
         let thirtyDaysAgo = now.addingTimeInterval(-30 * 86_400)
-        report.busiestBlockTokens = report.blocks.filter { $0.end > thirtyDaysAgo }.map(\.tokens.total).max() ?? 0
+        // The window in progress is left out, so a new record reads above 100%.
+        report.busiestBlockTokens = report.blocks
+            .filter { $0.end > thirtyDaysAgo && $0.id != report.currentBlock?.id }
+            .map(\.tokens.total).max() ?? 0
 
         let startOfToday = calendar.startOfDay(for: now)
         let weekStart = now.addingTimeInterval(-7 * 86_400)
@@ -143,10 +146,11 @@ public struct UsageReport: Sendable {
         report.modelsWeek = models.values.sorted { $0.totals.tokens.total > $1.totals.tokens.total }
         report.projectsToday = projects.values.sorted { $0.totals.tokens.total > $1.totals.tokens.total }
 
-        // Busiest week: the largest sum of 7 consecutive calendar days, and never less
-        // than the rolling week we're in.
-        var busiestWeek = report.week.tokens.total
-        for day in days.keys {
+        // Busiest week: the largest sum of 7 consecutive calendar days that ended before
+        // the rolling week we're in.
+        var busiestWeek = 0
+        let lastDay = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: weekStart)) ?? weekStart
+        for day in days.keys where day <= lastDay {
             var sum = 0
             for offset in 0..<7 {
                 if let d = calendar.date(byAdding: .day, value: -offset, to: day) { sum += days[d] ?? 0 }

@@ -47,13 +47,13 @@ struct LimitsView: View {
         Form {
             Section {
                 Picker("100% is", selection: $store.settings.limits.mode) {
-                    Text("Auto: your busiest 5-hour window in the last 30 days").tag(LimitMode.auto)
+                    Text("Auto: your busiest earlier 5-hour window in the last 30 days").tag(LimitMode.auto)
                     Text("Custom token budgets").tag(LimitMode.custom)
                 }
                 .pickerStyle(.radioGroup)
                 if store.settings.limits.mode == .auto {
-                    LabeledContent("Busiest 5-hour window", value: "\(Format.tokens(report.busiestBlockTokens)) tokens")
-                    LabeledContent("Busiest 7 days", value: "\(Format.tokens(report.busiestWeekTokens)) tokens")
+                    LabeledContent("Busiest earlier 5-hour window", value: report.busiestBlockTokens > 0 ? "\(Format.tokens(report.busiestBlockTokens)) tokens" : "Not enough history yet")
+                    LabeledContent("Busiest earlier 7 days", value: report.busiestWeekTokens > 0 ? "\(Format.tokens(report.busiestWeekTokens)) tokens" : "Not enough history yet")
                 } else {
                     MillionsField(title: "5-hour window budget", tokens: $store.settings.limits.fiveHourTokens)
                     MillionsField(title: "Weekly budget", tokens: $store.settings.limits.weeklyTokens)
@@ -65,7 +65,7 @@ struct LimitsView: View {
             } header: {
                 Text("Limits")
             } footer: {
-                Text("Claude plan limits aren't written to the logs, so percentages are estimates against this reference. Tokens include cache reads and writes, as in ccusage.")
+                Text("Claude plan limits aren't written to the logs, so percentages are estimates against this reference. In Auto, the window or week in progress is left out of the reference, so a new record reads above 100%. Tokens include cache reads and writes, as in ccusage.")
                     .foregroundStyle(.secondary)
             }
 

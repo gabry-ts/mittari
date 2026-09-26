@@ -61,8 +61,8 @@ extension LimitMode {
     /// What 100% means, for labels and tooltips.
     var explanation: String {
         switch self {
-        case .auto: "Your busiest 5-hour window in the last 30 days = 100%. Plan limits aren't in the logs, so this is an estimate."
-        case .custom: "Your own token budgets = 100%. Plan limits aren't in the logs, so this is an estimate."
+        case .auto: "100% is your busiest earlier 5-hour window (and week) in the last 30 days, so a new record reads above 100%. Plan limits aren't in the logs: this is an estimate."
+        case .custom: "100% is your own token budget. Plan limits aren't in the logs: this is an estimate."
         }
     }
 }

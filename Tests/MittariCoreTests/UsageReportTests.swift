@@ -16,6 +16,7 @@ final class UsageReportTests: XCTestCase {
         let now = Timestamp.parse("2026-09-26T12:00:00Z")!
         let report = UsageReport.build(
             entries: [
+                entry("2026-09-05T10:00:00Z", tokens: 3000),
                 entry("2026-09-20T10:00:00Z", tokens: 5000),
                 entry("2026-09-26T09:30:00Z", tokens: 1000),
                 entry("2026-09-26T11:00:00Z", tokens: 1000),
@@ -27,7 +28,8 @@ final class UsageReportTests: XCTestCase {
         XCTAssertEqual(report.busiestBlockTokens, 5000)
         XCTAssertEqual(report.today.tokens.total, 2000)
         XCTAssertEqual(report.week.tokens.total, 7000)
-        XCTAssertEqual(report.busiestWeekTokens, 7000)
+        // Earlier windows only: the current one can go past 100%.
+        XCTAssertEqual(report.busiestWeekTokens, 3000)
         XCTAssertEqual(report.projectsToday.first?.name, "app")
         XCTAssertEqual(report.modelsWeek.first?.name, "Opus 5")
         // Opus 5 input at $5 per million.
