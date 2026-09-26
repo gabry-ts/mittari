@@ -22,7 +22,7 @@
 - **5-hour window**: how far into the current window you are, when it resets and what it would have cost on the API.
 - **Menu bar**: pick and order a ring gauge, the window percentage, time to reset, tokens today and cost today. The ring turns orange and red past your thresholds.
 - **Popover**: week, today and this month, models, projects and Codex, each section can be hidden or reordered.
-- **Statistics**: tokens per hour or day over 24 hours, 7 days or 30 days, with 5-hour windows shaded, plus breakdowns by project and model.
+- **Statistics**: tokens per hour, day or week, from 24 hours up to a year, with 5-hour windows shaded, plus breakdowns by project and model.
 - **Notifications** when the window crosses the warning or critical threshold.
 - **Codex**: sessions and active time today, and tokens and plan limits when your Codex version logs them.
 
@@ -53,7 +53,7 @@
 
 ## How the numbers work
 
-- **Where they come from**: Claude Code transcripts in `~/.claude/projects` (and `~/.config/claude/projects` or `$CLAUDE_CONFIG_DIR`), and Codex sessions in `~/.codex/sessions`. The last 40 days are read, then only lines appended since.
+- **Where they come from**: Claude Code transcripts in `~/.claude/projects` (and `~/.config/claude/projects` or `$CLAUDE_CONFIG_DIR`), and Codex sessions in `~/.codex/sessions`. The last year is read, then only lines appended since.
 - **Tokens** include input, output, cache writes and cache reads, as in ccusage. A response logged more than once (streaming, resumed sessions) counts once.
 - **5-hour windows** start at the first message, rounded down to the hour, and last five hours; the next message after that opens a new one.
 - **Percentages are estimates.** Plan limits aren't in the logs, so 100% is either your busiest earlier 5-hour window (and week) in the last 30 days, or token budgets you set in **Limits**. The week is the rolling last 7 days.
