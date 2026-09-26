@@ -8,11 +8,12 @@ final class FolderWatcher {
     private let box: Box
 
     private final class Box {
-        let handler: ([String]) -> Void
-        init(handler: @escaping ([String]) -> Void) { self.handler = handler }
+        let handler: @Sendable ([String]) -> Void
+        init(handler: @escaping @Sendable ([String]) -> Void) { self.handler = handler }
     }
 
-    init?(paths: [String], latency: TimeInterval, queue: DispatchQueue, handler: @escaping ([String]) -> Void) {
+    /// `handler` runs on `queue`, so it must not assume the main actor.
+    init?(paths: [String], latency: TimeInterval, queue: DispatchQueue, handler: @escaping @Sendable ([String]) -> Void) {
         guard !paths.isEmpty else { return nil }
         box = Box(handler: handler)
         var context = FSEventStreamContext(
