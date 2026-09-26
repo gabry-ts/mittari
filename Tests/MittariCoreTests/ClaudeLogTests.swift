@@ -71,6 +71,19 @@ final class ClaudeLogTests: XCTestCase {
         XCTAssertEqual(ledger.count, 2)
     }
 
+    func testSortKeepsDeduplicationWorking() {
+        var ledger = UsageLedger()
+        ledger.add(ClaudeLog.parse(line: line(request: "late", time: "2026-09-22T15:00:00Z", output: 5), project: "p")!)
+        ledger.add(ClaudeLog.parse(line: line(request: "early", time: "2026-09-22T09:00:00Z", output: 5), project: "p")!)
+        ledger.sort()
+        XCTAssertEqual(ledger.entries.map(\.tokens.output), [5, 5])
+        XCTAssertEqual(ledger.entries.first?.date, Timestamp.parse("2026-09-22T09:00:00Z"))
+        // A later copy of "late" still merges into the same entry after sorting.
+        ledger.add(ClaudeLog.parse(line: line(request: "late", time: "2026-09-22T15:00:01Z", output: 50), project: "p")!)
+        XCTAssertEqual(ledger.count, 2)
+        XCTAssertEqual(ledger.entries.last?.tokens.output, 50)
+    }
+
     func testPruneDropsOldEntries() {
         var ledger = UsageLedger()
         ledger.add(ClaudeLog.parse(line: line(time: "2026-08-01T00:00:00Z"), project: "p")!)

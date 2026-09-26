@@ -95,37 +95,72 @@ public enum ClaudeLog {
 
 /// Deduplicated usage, keyed by message and request ID.
 public struct UsageLedger: Sendable {
-    private var keyed: [String: UsageEntry] = [:]
-    private var unkeyed: [UsageEntry] = []
+    private var items: [UsageEntry] = []
+    /// Position in `items` of each keyed entry.
+    private var index: [String: Int] = [:]
+    /// New lines are usually the newest, so `items` mostly stays in date order and only
+    /// needs sorting after an initial scan.
+    private var isSorted = true
 
     public init() {}
 
-    public var count: Int { keyed.count + unkeyed.count }
+    public var count: Int { items.count }
 
     /// Adds a record, merging it with an earlier copy of the same response: the earliest
     /// timestamp and the largest count of each kind win, since streamed copies grow.
     public mutating func add(_ record: ClaudeLog.Record) {
         guard let key = record.key else {
-            unkeyed.append(record.entry)
+            append(record.entry)
             return
         }
-        if var existing = keyed[key] {
-            existing.tokens = existing.tokens.union(record.entry.tokens)
-            existing.date = min(existing.date, record.entry.date)
-            keyed[key] = existing
+        if let position = index[key] {
+            items[position].tokens = items[position].tokens.union(record.entry.tokens)
+            if record.entry.date < items[position].date {
+                items[position].date = record.entry.date
+                isSorted = false
+            }
         } else {
-            keyed[key] = record.entry
+            index[key] = items.count
+            append(record.entry)
         }
+    }
+
+    private mutating func append(_ entry: UsageEntry) {
+        if let last = items.last, entry.date < last.date { isSorted = false }
+        items.append(entry)
+    }
+
+    /// Puts entries in date order, keeping keys pointing at the right positions.
+    public mutating func sort() {
+        guard !isSorted else { return }
+        let keyOf = Dictionary(uniqueKeysWithValues: index.map { ($0.value, $0.key) })
+        let order = items.indices.sorted { items[$0].date < items[$1].date }
+        var newIndex: [String: Int] = [:]
+        newIndex.reserveCapacity(index.count)
+        for (newPosition, oldPosition) in order.enumerated() {
+            if let key = keyOf[oldPosition] { newIndex[key] = newPosition }
+        }
+        items = order.map { items[$0] }
+        index = newIndex
+        isSorted = true
     }
 
     /// Drops entries older than `date`, to bound memory.
     public mutating func prune(before date: Date) {
-        keyed = keyed.filter { $0.value.date >= date }
-        unkeyed.removeAll { $0.date < date }
+        guard items.contains(where: { $0.date < date }) else { return }
+        let keyOf = Dictionary(uniqueKeysWithValues: index.map { ($0.value, $0.key) })
+        var kept: [UsageEntry] = []
+        var newIndex: [String: Int] = [:]
+        for (position, entry) in items.enumerated() where entry.date >= date {
+            if let key = keyOf[position] { newIndex[key] = kept.count }
+            kept.append(entry)
+        }
+        items = kept
+        index = newIndex
     }
 
     /// All entries, oldest first.
     public var entries: [UsageEntry] {
-        (Array(keyed.values) + unkeyed).sorted { $0.date < $1.date }
+        isSorted ? items : items.sorted { $0.date < $1.date }
     }
 }

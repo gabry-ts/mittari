@@ -105,6 +105,7 @@ public final class UsageScanner {
             }
         }
         ledger.prune(before: cutoff)
+        ledger.sort()
         lastScan = now
         lastScanDuration = Date().timeIntervalSince(started)
     }
@@ -122,6 +123,7 @@ public final class UsageScanner {
                 readCodex(url, size: size)
             }
         }
+        ledger.sort()
         lastScan = now
     }
 
