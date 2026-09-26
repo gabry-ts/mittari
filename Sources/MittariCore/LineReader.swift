@@ -20,7 +20,7 @@ public enum LineReader {
         var consumed = offset
         var pending = Data()
         while true {
-            guard let chunk = try? handle.read(upToCount: chunkSize), !chunk.isEmpty else { break }
+            guard let chunk = autoreleasepool(invoking: { try? handle.read(upToCount: chunkSize) }), !chunk.isEmpty else { break }
             pending.append(chunk)
             let used = pending.withUnsafeBytes { buffer -> Int in
                 guard let base = buffer.baseAddress else { return 0 }

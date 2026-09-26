@@ -138,11 +138,15 @@ public final class UsageScanner {
         let folder = String(relative.split(separator: "/").first ?? "")
         var seenCwds = cwds[folder] ?? []
         let newOffset = LineReader.read(url, from: state.offset) { line in
-            guard ClaudeLog.mightContainUsage(line),
-                  let record = ClaudeLog.parse(line: Data(line), project: folder) else { return }
-            ledger.add(record)
-            if let cwd = record.cwd, seenCwds.count < 8, !seenCwds.contains(cwd) {
-                seenCwds.append(cwd)
+            guard ClaudeLog.mightContainUsage(line) else { return }
+            // Decoding leaves autoreleased objects behind; drain them per line, or a first
+            // scan of a few gigabytes of logs peaks at gigabytes of memory.
+            autoreleasepool {
+                guard let record = ClaudeLog.parse(line: Data(line), project: folder) else { return }
+                ledger.add(record)
+                if let cwd = record.cwd, seenCwds.count < 8, !seenCwds.contains(cwd) {
+                    seenCwds.append(cwd)
+                }
             }
         }
         cwds[folder] = seenCwds
@@ -160,7 +164,7 @@ public final class UsageScanner {
         }
         guard size != state.offset || codexParsers[url.path] == nil else { return }
         let newOffset = LineReader.read(url, from: state.offset) { line in
-            parser.consume(Data(line))
+            autoreleasepool { parser.consume(Data(line)) }
         }
         state.offset = newOffset ?? size
         state.size = size
