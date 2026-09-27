@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-SIGN_IDENTITY="${MITTARI_SIGN_IDENTITY:-Apple Development: gabrielepartiti@outlook.com (CD2U989KNR)}"
+SIGN_IDENTITY="${MITTARI_SIGN_IDENTITY:-Developer ID Application}"
 APP="$ROOT/build/Mittari.app"
 
 swift build -c release --arch arm64 --arch x86_64
@@ -35,6 +35,13 @@ if ! otool -l "$APP/Contents/MacOS/Mittari" | grep -q "@executable_path/../Frame
     install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/Mittari"
 fi
 
+# Ad-hoc identities (SIGN_IDENTITY=-, for local builds without a Developer ID cert) can't
+# carry a secure timestamp.
+SIGN_FLAGS=(--force --options runtime --sign "$SIGN_IDENTITY")
+if [[ "$SIGN_IDENTITY" != "-" ]]; then
+    SIGN_FLAGS+=(--timestamp)
+fi
+
 # Sign inside-out, following Sparkle's documented order: its XPC services and helper
 # tools first, then the framework itself, then the app.
 FRAMEWORK="$APP/Contents/Frameworks/Sparkle.framework"
@@ -43,10 +50,10 @@ for item in \
     "$FRAMEWORK/Versions/B/XPCServices/Installer.xpc" \
     "$FRAMEWORK/Versions/B/Autoupdate" \
     "$FRAMEWORK/Versions/B/Updater.app"; do
-    [[ -e "$item" ]] && codesign --force --options runtime --sign "$SIGN_IDENTITY" "$item"
+    [[ -e "$item" ]] && codesign "${SIGN_FLAGS[@]}" "$item"
 done
-codesign --force --options runtime --sign "$SIGN_IDENTITY" "$FRAMEWORK"
+codesign "${SIGN_FLAGS[@]}" "$FRAMEWORK"
 
-codesign --force --options runtime --sign "$SIGN_IDENTITY" "$APP"
+codesign "${SIGN_FLAGS[@]}" "$APP"
 
 echo "Built $APP"
