@@ -44,6 +44,7 @@ struct GeneralView: View {
                     .foregroundStyle(.secondary)
             }
             Section {
+                LabeledContent("Version", value: AppVersion.string)
                 Button("Buy Me a Coffee…") { ExternalLinks.openBuyMeACoffee() }
                     .buttonStyle(.link)
                     .foregroundStyle(.secondary)
@@ -54,6 +55,15 @@ struct GeneralView: View {
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
         .background(AirBackground())
+    }
+}
+
+/// The version and build shown in About, read from the app's own bundle.
+enum AppVersion {
+    static var string: String {
+        let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0"
+        return "\(short) (\(build))"
     }
 }
 
