@@ -43,6 +43,13 @@ struct GeneralView: View {
                 Text("Mittari asks once, the first time it can check, whether to check automatically from then on.")
                     .foregroundStyle(.secondary)
             }
+            Section {
+                Button("Buy Me a Coffee…") { ExternalLinks.openBuyMeACoffee() }
+                    .buttonStyle(.link)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("About")
+            }
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)

@@ -83,6 +83,7 @@ struct MenuContent: View {
             HStack(spacing: 14) {
                 Button("Check for Updates…") { Updater.checkForUpdates() }
                 Spacer()
+                Button("Buy Me a Coffee…") { ExternalLinks.openBuyMeACoffee() }
             }
             .buttonStyle(.borderless)
             .foregroundStyle(.secondary)
