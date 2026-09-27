@@ -25,6 +25,7 @@
 - **Statistics**: tokens per hour, day or week, from 24 hours up to a year, with 5-hour windows shaded, plus breakdowns by project and model.
 - **Notifications** when the window crosses the warning or critical threshold.
 - **Codex**: sessions and active time today, and tokens and plan limits when your Codex version logs them.
+- **Automatic updates** via Sparkle, and a universal build for Apple Silicon and Intel.
 
 <p align="center">
   <picture>
@@ -45,11 +46,17 @@
 
 ## Install
 
-1. Download the latest `Mittari-<version>.dmg` from [Releases](https://github.com/gabry-ts/mittari/releases) and drag the app to Applications.
-2. Mittari is signed with a local Apple Development identity and not notarized, so Gatekeeper blocks the first launch:
-   - Open the app once, then go to **System Settings > Privacy & Security** and click **Open Anyway**.
-   - Or remove the quarantine flag from Terminal: `xattr -dr com.apple.quarantine /Applications/Mittari.app`
-3. Launch Mittari. The gauge appears in the menu bar; the first read of your logs takes a few seconds.
+With Homebrew:
+
+```sh
+brew install --cask gabry-ts/tap/mittari
+```
+
+Or manually: download the latest `Mittari-<version>.dmg` from [Releases](https://github.com/gabry-ts/mittari/releases), drag the app to Applications, and open it. Mittari is signed with a Developer ID and notarized by Apple, so there's no quarantine warning to work around, and it runs natively on both Apple Silicon and Intel Macs.
+
+Mittari checks for updates itself from then on; see **Settings > General** to change how often.
+
+Launch Mittari. The gauge appears in the menu bar; the first read of your logs takes a few seconds.
 
 ## How the numbers work
 
@@ -71,7 +78,7 @@ open build/Mittari.app
 swift test              # core tests
 ```
 
-Set `MITTARI_SIGN_IDENTITY` to sign with your own identity. `Mittari --render-snapshots <dir>` renders every screen with sample data, `Mittari --render-icon <dir>` the app icon, and `Mittari --summary` prints what it reads from your logs.
+`scripts/build.sh` produces a universal (Apple Silicon and Intel) build signed with a Developer ID identity by default; set `MITTARI_SIGN_IDENTITY=-` for an ad-hoc local signature, or to your own identity. `Mittari --render-snapshots <dir>` renders every screen with sample data, `Mittari --render-icon <dir>` the app icon, and `Mittari --summary` prints what it reads from your logs.
 
 ## Uninstall
 
