@@ -4,6 +4,7 @@ import SwiftUI
 struct GeneralView: View {
     @Environment(SettingsStore.self) private var store
     @State private var launchAtLogin = LoginItem.status == .enabled
+    @State private var automaticallyChecksForUpdates = Updater.automaticallyChecksForUpdates
 
     var body: some View {
         @Bindable var store = store
@@ -28,6 +29,18 @@ struct GeneralView: View {
                 Text("Refresh")
             } footer: {
                 Text("New lines in the logs are picked up within a few seconds of being written. The periodic rescan is a fallback, and only reads what changed.")
+                    .foregroundStyle(.secondary)
+            }
+            Section {
+                Toggle("Automatically check for updates", isOn: $automaticallyChecksForUpdates)
+                    .onChange(of: automaticallyChecksForUpdates) { _, enabled in
+                        Updater.automaticallyChecksForUpdates = enabled
+                    }
+                Button("Check for Updates Now…") { Updater.checkForUpdates() }
+            } header: {
+                Text("Updates")
+            } footer: {
+                Text("Mittari asks once, the first time it can check, whether to check automatically from then on.")
                     .foregroundStyle(.secondary)
             }
         }

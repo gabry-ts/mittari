@@ -38,6 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         let isFirstLaunch = !SettingsStore.hasSavedSettings
         store.saveNow()
+        _ = Updater.controller
 
         statusItem = StatusItemController { [weak self] in
             guard let self else { return AnyView(EmptyView()) }

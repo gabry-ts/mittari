@@ -61,23 +61,33 @@ struct MenuContent: View {
     }
 
     private var footer: some View {
-        HStack(spacing: 14) {
-            Button(action: openStatistics) {
-                Label("Statistics…", systemImage: "chart.bar.xaxis")
+        VStack(spacing: 8) {
+            HStack(spacing: 14) {
+                Button(action: openStatistics) {
+                    Label("Statistics…", systemImage: "chart.bar.xaxis")
+                }
+                Button(action: openSettings) {
+                    Label("Settings…", systemImage: "gearshape")
+                }
+                .keyboardShortcut(",")
+                Spacer()
+                Button { NSApplication.shared.terminate(nil) } label: {
+                    Label("Quit", systemImage: "power")
+                }
+                .keyboardShortcut("q")
             }
-            Button(action: openSettings) {
-                Label("Settings…", systemImage: "gearshape")
+            .buttonStyle(.borderless)
+            .foregroundStyle(.secondary)
+            .font(.callout)
+            Divider()
+            HStack(spacing: 14) {
+                Button("Check for Updates…") { Updater.checkForUpdates() }
+                Spacer()
             }
-            .keyboardShortcut(",")
-            Spacer()
-            Button { NSApplication.shared.terminate(nil) } label: {
-                Label("Quit", systemImage: "power")
-            }
-            .keyboardShortcut("q")
+            .buttonStyle(.borderless)
+            .foregroundStyle(.secondary)
+            .font(.caption)
         }
-        .buttonStyle(.borderless)
-        .foregroundStyle(.secondary)
-        .font(.callout)
         .padding(.horizontal, 4)
         .padding(.top, 2)
     }
