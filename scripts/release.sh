@@ -80,6 +80,7 @@ done
 "$TOOLS_DIR/bin/generate_appcast" \
     --ed-key-file "$SPARKLE_KEY_FILE" \
     --download-url-prefix "https://github.com/$REPO/releases/download/v$VERSION/" \
+    --embed-release-notes \
     -o "$ROOT/build/appcast.xml" \
     "$APPCAST_INPUT"
 
