@@ -32,6 +32,7 @@ struct MenuContent: View {
                 actions: [.init("Statistics…", symbol: "chart.bar.xaxis", perform: openStatistics)],
                 onSettings: openSettings,
                 onCheckForUpdates: { Updater.checkForUpdates() },
+                canCheckForUpdates: Updater.availability.canCheckForUpdates,
                 onBuyMeACoffee: { ExternalLinks.openBuyMeACoffee() })
         }
         .puiAccent(MittariStyle.accent)

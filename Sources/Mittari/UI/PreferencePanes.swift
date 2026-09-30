@@ -61,6 +61,7 @@ struct AboutView: View {
                 version: "Version \(AppVersion.string)",
                 checksAutomatically: $automaticallyChecksForUpdates,
                 onCheckForUpdates: { Updater.checkForUpdates() },
+                canCheckForUpdates: Updater.availability.canCheckForUpdates,
                 onBuyMeACoffee: { ExternalLinks.openBuyMeACoffee() })
                 .padding(.top, 44)
                 .padding(.horizontal, PUI.Space.xxl)
