@@ -10,10 +10,7 @@ struct GeneralView: View {
         @Bindable var store = store
         MittariPane(pane: .general, subtitle: "Startup and how often the logs are read again.") {
             SettingsGroup("Startup") {
-                SettingsRow("Launch at login") {
-                    Toggle("Launch at login", isOn: $launchAtLogin)
-                        .toggleStyle(PUISwitchStyle(showsLabel: false))
-                }
+                SwitchRow("Launch at login", isOn: $launchAtLogin)
                 if LoginItem.status == .requiresApproval {
                     SettingsRow("Waiting for your approval in System Settings") {
                         Button("Approve in System Settings…") { LoginItem.openSystemSettings() }
@@ -26,14 +23,13 @@ struct GeneralView: View {
             }
             SettingsGroup("Refresh", footer: "New lines in the logs are picked up within a few seconds of being written. The periodic rescan is a fallback, and only reads what changed.") {
                 SettingsRow("Rescan every") {
-                    Picker("Rescan every", selection: $store.settings.refreshInterval) {
-                        Text("30 s").tag(30.0)
-                        Text("1 min").tag(60.0)
-                        Text("2 min").tag(120.0)
-                        Text("5 min").tag(300.0)
-                    }
-                    .labelsHidden()
-                    .fixedSize()
+                    PopUpMenu(selection: $store.settings.refreshInterval, options: [
+                        (30.0, Text("30 s")),
+                        (60.0, Text("1 min")),
+                        (120.0, Text("2 min")),
+                        (300.0, Text("5 min")),
+                    ])
+                    .accessibilityLabel(Text("Rescan every"))
                 }
             }
         }
@@ -118,30 +114,12 @@ struct LimitsView: View {
                 ThresholdPreview(limits: limits, percent: Gauge(report: report, limits: limits, now: monitor.now).fiveHourPercent)
                 PercentSlider(title: "Warning at", percent: $store.settings.limits.warningPercent, range: 50...95)
                 PercentSlider(title: "Critical at", percent: $store.settings.limits.criticalPercent, range: 60...100)
-                SettingsRow("Notify when the 5-hour window crosses a threshold") {
-                    Toggle("Notify when the 5-hour window crosses a threshold", isOn: $store.settings.limits.notify)
-                        .toggleStyle(PUISwitchStyle(showsLabel: false))
-                }
+                SwitchRow("Notify when the 5-hour window crosses a threshold", isOn: $store.settings.limits.notify)
             }
         }
         .onChange(of: store.settings.limits.warningPercent) { _, warning in
             if store.settings.limits.criticalPercent < warning { store.settings.limits.criticalPercent = warning }
         }
-    }
-}
-
-/// A value on the right of a settings row, in secondary body text.
-struct ValueText: View {
-    let text: String
-    @Environment(\.colorScheme) private var colorScheme
-
-    init(_ text: String) { self.text = text }
-
-    var body: some View {
-        Text(verbatim: text)
-            .font(PUI.Font.body)
-            .monospacedDigit()
-            .foregroundStyle(Ink(colorScheme).secondary)
     }
 }
 
@@ -273,14 +251,10 @@ struct PercentSlider: View {
     var body: some View {
         SettingsRow(title) {
             HStack(spacing: PUI.Space.m) {
-                PUISlider(value: Binding(
-                    get: { percent },
-                    set: { percent = min(max(($0 / 5).rounded() * 5, range.lowerBound), range.upperBound) }
-                ), in: range)
-                .frame(width: 220)
-                .accessibilityLabel(title)
-                ValueText("\(Int(percent))%")
-                    .frame(width: 44, alignment: .trailing)
+                PUISlider(value: $percent, in: range, step: 5)
+                    .frame(width: 220)
+                    .accessibilityLabel(title)
+                ValueText("\(Int(percent))%", width: 44)
             }
         }
     }
@@ -296,7 +270,7 @@ struct DataView: View {
                     SettingsRow(displayPath(folder.url)) {
                         HStack(spacing: PUI.Space.m) {
                             if folder.exists {
-                                ValueText("\(folder.fileCount) files")
+                                ValueText("\(folder.fileCount.formatted()) files")
                                 Button("Show") { NSWorkspace.shared.open(folder.url) }
                                     .buttonStyle(SecondaryButtonStyle(height: PUI.Control.small))
                             } else {
@@ -312,7 +286,7 @@ struct DataView: View {
                     ValueText("\(monitor.entryCount.formatted()) in the last year")
                 }
                 SettingsRow("Codex sessions") {
-                    ValueText("\(monitor.report.codex.sessionCount) in the last year")
+                    ValueText("\(monitor.report.codex.sessionCount.formatted()) in the last year")
                 }
                 if let last = monitor.lastScan {
                     SettingsRow("Last scan") {
