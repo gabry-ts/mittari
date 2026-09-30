@@ -5,8 +5,16 @@ import Sparkle
 /// otherwise follows its own default behaviour for downloading and installing updates.
 @MainActor
 enum Updater {
+    /// The offscreen render harnesses build ordinary views, including the About pane,
+    /// with sample data and no real app delegate; starting Sparkle there would reach the
+    /// network and could show its own permission alert, so it stays unstarted then.
+    private static var isRenderHarness: Bool {
+        let args = CommandLine.arguments
+        return args.contains("--render-snapshots") || args.contains("--render-icon")
+    }
+
     static let controller = SPUStandardUpdaterController(
-        startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil
+        startingUpdater: !isRenderHarness, updaterDelegate: nil, userDriverDelegate: nil
     )
 
     static var automaticallyChecksForUpdates: Bool {
