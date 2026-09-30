@@ -92,9 +92,6 @@ struct SettingsView: View {
         SettingsWindow(sections: Self.sections, selection: selection) {
             paneView(navigation.pane)
         }
-        // The sidebar leaves room for the traffic lights itself, so it runs under the
-        // transparent title bar instead of below it.
-        .ignoresSafeArea(.container, edges: .top)
         .frame(minWidth: PUI.Window.dashboardMin.width, minHeight: PUI.Window.dashboardMin.height)
         .puiAccent(MittariStyle.accent)
     }
