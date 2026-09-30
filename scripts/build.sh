@@ -35,6 +35,16 @@ if ! otool -l "$APP/Contents/MacOS/Mittari" | grep -q "@executable_path/../Frame
     install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/Mittari"
 fi
 
+# Partiti UI's built-in strings live in its SwiftPM resource bundle, which lands next to the
+# binary. The library looks for it in Contents/Resources, where codesign accepts it; it holds
+# no code and is sealed with the app's own signature.
+PARTITI_BUNDLE="$BIN_DIR/PartitiUI_PartitiUI.bundle"
+if [[ ! -d "$PARTITI_BUNDLE" ]]; then
+    echo "error: PartitiUI_PartitiUI.bundle not found in $BIN_DIR" >&2
+    exit 1
+fi
+ditto "$PARTITI_BUNDLE" "$APP/Contents/Resources/PartitiUI_PartitiUI.bundle"
+
 # Ad-hoc identities (SIGN_IDENTITY=-, for local builds without a Developer ID cert) can't
 # carry a secure timestamp, and under the hardened runtime their missing Team ID makes
 # library validation reject the embedded Sparkle.framework at launch.
