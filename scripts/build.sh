@@ -36,10 +36,11 @@ if ! otool -l "$APP/Contents/MacOS/Mittari" | grep -q "@executable_path/../Frame
 fi
 
 # Ad-hoc identities (SIGN_IDENTITY=-, for local builds without a Developer ID cert) can't
-# carry a secure timestamp.
-SIGN_FLAGS=(--force --options runtime --sign "$SIGN_IDENTITY")
+# carry a secure timestamp, and under the hardened runtime their missing Team ID makes
+# library validation reject the embedded Sparkle.framework at launch.
+SIGN_FLAGS=(--force --sign "$SIGN_IDENTITY")
 if [[ "$SIGN_IDENTITY" != "-" ]]; then
-    SIGN_FLAGS+=(--timestamp)
+    SIGN_FLAGS+=(--options runtime --timestamp)
 fi
 
 # Sign inside-out, following Sparkle's documented order: its XPC services and helper
