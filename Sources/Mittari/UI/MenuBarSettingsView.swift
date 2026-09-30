@@ -1,4 +1,5 @@
 import MittariCore
+import PartitiUI
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -7,61 +8,55 @@ struct MenuBarSettingsView: View {
     @Environment(SettingsStore.self) private var store
     @State private var draggingItem: Int?
     @State private var editingItem: Int?
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
-            AirPage(title: "Menu Bar", subtitle: "What sits in the menu bar, in the order you like.", drawsBackground: false) {
-                Card {
-                    VStack(alignment: .leading, spacing: 14) {
-                        CardTitle(title: "Status Item", systemImage: "menubar.rectangle")
-                        statusStrip
-                        Text("Drag to reorder. Click an item to remove it.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+            MittariPane(pane: .menuBar, subtitle: "What sits in the menu bar, in the order you like.") {
+                SettingsGroup("Status Item", footer: "Drag to reorder. Click an item to remove it.") {
+                    statusStrip
+                        .padding(PUI.Space.l)
                 }
-                Card {
-                    VStack(alignment: .leading, spacing: 10) {
-                        CardTitle(title: "Available Items", systemImage: "square.grid.2x2")
-                        ForEach(StatusElement.allCases, id: \.self) { element in
-                            itemRow(element)
-                        }
+                SettingsGroup("Available Items") {
+                    ForEach(StatusElement.allCases, id: \.self) { element in
+                        itemRow(element)
                     }
                 }
             }
             MenuBarPreview(showsPopover: false)
                 .frame(width: 340)
         }
-        .background(AirBackground())
     }
 
     private var statusStrip: some View {
         let items = store.settings.menuBar.items
-        return HStack(spacing: 6) {
+        return HStack(spacing: PUI.Space.s) {
             Spacer(minLength: 0)
             ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                 StatusChip(item: item, isDragging: draggingItem == index)
                     .onTapGesture { editingItem = index }
                     .popover(isPresented: editingBinding(index), arrowEdge: .bottom) {
-                        VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: PUI.Space.l) {
                             Text(item.title)
-                                .foregroundStyle(.secondary)
+                                .font(PUI.Font.body)
+                                .foregroundStyle(Ink(colorScheme).secondary)
                             Button("Remove", role: .destructive) {
                                 editingItem = nil
                                 store.settings.menuBar.items.remove(at: index)
                             }
+                            .buttonStyle(SecondaryButtonStyle(height: PUI.Control.small))
                         }
-                        .padding(14)
+                        .padding(PUI.Space.l)
                         .frame(minWidth: 200)
                     }
                     .reorderable(index: index, items: itemsBinding, dragging: $draggingItem)
             }
             addItemMenu
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .padding(.horizontal, PUI.Space.m + 2)
+        .padding(.vertical, PUI.Space.s)
         .frame(maxWidth: .infinity, minHeight: 36)
-        .background(.primary.opacity(0.05), in: .rect(cornerRadius: 10))
+        .background(Ink(colorScheme).fill, in: .rect(cornerRadius: PUI.Radius.group, style: .continuous))
         .animation(.snappy, value: items)
     }
 
@@ -76,17 +71,9 @@ struct MenuBarSettingsView: View {
                 }
             }
         )
-        return HStack(spacing: 10) {
-            Image(systemName: element.icon)
-                .foregroundStyle(isOn.wrappedValue ? AnyShapeStyle(Theme.amber) : AnyShapeStyle(.secondary))
-                .frame(width: 20)
-            Text(element.title)
-            Spacer()
+        return SymbolRow(symbol: element.icon, title: element.title, isOn: isOn.wrappedValue) {
             Toggle(element.title, isOn: isOn)
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.small)
-                .tint(Theme.amber)
+                .toggleStyle(PUISwitchStyle(showsLabel: false))
         }
     }
 
@@ -98,9 +85,13 @@ struct MenuBarSettingsView: View {
             }
         } label: {
             Image(systemName: "plus")
+                .font(.system(size: PUI.Control.smallSymbol, weight: .medium))
+                .foregroundStyle(Ink(colorScheme).secondary)
+                .frame(width: PUI.Control.small, height: PUI.Control.small)
+                .contentShape(Rectangle())
         }
         .menuStyle(.button)
-        .buttonStyle(.borderless)
+        .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .fixedSize()
         .help("Add an item")
@@ -127,54 +118,28 @@ struct PopoverSettingsView: View {
     @State private var draggingSection: Int?
 
     var body: some View {
+        let sections = store.settings.popover.sections
         HStack(alignment: .top, spacing: 0) {
-            AirPage(title: "Popover", subtitle: "What opens under the menu bar item.", drawsBackground: false) {
-                Card {
-                    VStack(alignment: .leading, spacing: 14) {
-                        CardTitle(title: "Sections", systemImage: "rectangle.stack")
-                        sections
-                        Text("Drag to reorder. Switch off what you don't need.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+            MittariPane(pane: .popover, subtitle: "What opens under the menu bar item.") {
+                SettingsGroup("Sections", footer: "Drag to reorder. Switch off what you don't need.") {
+                    ForEach(Array(sections.enumerated()), id: \.element.section) { index, entry in
+                        sectionRow(index: index, entry: entry)
+                            .reorderable(index: index, items: sectionsBinding, dragging: $draggingSection)
                     }
                 }
+                .animation(.snappy, value: sections)
             }
             MenuBarPreview(showsPopover: true)
                 .frame(width: 360)
         }
-        .background(AirBackground())
     }
 
-    private var sections: some View {
-        let sections = store.settings.popover.sections
-        return VStack(spacing: 6) {
-            ForEach(Array(sections.enumerated()), id: \.element.section) { index, entry in
-                sectionCard(index: index, entry: entry)
-                    .reorderable(index: index, items: sectionsBinding, dragging: $draggingSection)
-            }
-        }
-        .animation(.snappy, value: sections)
-    }
-
-    private func sectionCard(index: Int, entry: PopoverEntry) -> some View {
+    private func sectionRow(index: Int, entry: PopoverEntry) -> some View {
         @Bindable var store = store
-        return HStack(spacing: 10) {
-            Image(systemName: "line.3.horizontal")
-                .foregroundStyle(.tertiary)
-            Image(systemName: entry.section.icon)
-                .foregroundStyle(entry.isEnabled ? AnyShapeStyle(Theme.amber) : AnyShapeStyle(.secondary))
-                .frame(width: 20)
-            Text(entry.section.title)
-                .foregroundStyle(entry.isEnabled ? .primary : .secondary)
-            Spacer()
+        return SymbolRow(symbol: entry.section.icon, title: entry.section.title, isOn: entry.isEnabled, showsHandle: true) {
             Toggle(entry.section.title, isOn: $store.settings.popover.sections[index].isEnabled)
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.small)
-                .tint(Theme.amber)
+                .toggleStyle(PUISwitchStyle(showsLabel: false))
         }
-        .padding(12)
-        .background(.primary.opacity(entry.isEnabled ? 0.05 : 0.025), in: .rect(cornerRadius: 12))
         .opacity(draggingSection == index ? 0.5 : 1)
         .contentShape(.rect)
     }
@@ -189,6 +154,37 @@ struct PopoverSettingsView: View {
 
 // MARK: - Pieces
 
+/// A settings row led by a symbol, in the accent while its item is on, with an optional
+/// drag handle for rows that reorder.
+private struct SymbolRow<Control: View>: View {
+    let symbol: String
+    let title: String
+    let isOn: Bool
+    var showsHandle = false
+    @ViewBuilder let control: Control
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        let ink = Ink(colorScheme)
+        HStack(spacing: PUI.Space.m + 2) {
+            if showsHandle {
+                Image(systemName: "line.3.horizontal")
+                    .font(PUI.Font.callout)
+                    .foregroundStyle(ink.tertiary)
+            }
+            RowSymbol(symbol, color: isOn ? MittariStyle.accent.legible(colorScheme) : ink.secondary)
+            Text(verbatim: title)
+                .font(PUI.Font.body)
+                .foregroundStyle(isOn ? ink.primary : ink.secondary)
+            Spacer(minLength: PUI.Space.l)
+            control
+        }
+        .padding(.horizontal, PUI.Space.l)
+        .padding(.vertical, PUI.Space.m)
+        .frame(minHeight: 38)
+    }
+}
+
 /// One item in the status item strip, drawn like the real menu bar.
 private struct StatusChip: View {
     @Environment(SettingsStore.self) private var store
@@ -200,10 +196,10 @@ private struct StatusChip: View {
 
     var body: some View {
         content
-            .font(.system(size: 13, weight: .medium).monospacedDigit())
-            .padding(.horizontal, 8)
+            .font(PUI.Font.menuBar)
+            .padding(.horizontal, PUI.Space.m)
             .padding(.vertical, 3)
-            .background(isHovering ? AnyShapeStyle(.fill.secondary) : AnyShapeStyle(.clear), in: .rect(cornerRadius: 5))
+            .puiHoverHighlight(isHovering, radius: 5)
             .opacity(isDragging ? 0.4 : 1)
             .contentShape(.rect)
             .onHover { isHovering = $0 }
@@ -240,36 +236,39 @@ private struct MenuBarPreview: View {
     @Environment(UsageMonitor.self) private var monitor
     let showsPopover: Bool
 
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
-        VStack(alignment: .trailing, spacing: 6) {
-            CardTitle(title: "Live Preview", systemImage: "eye")
+        let ink = Ink(colorScheme)
+        let popoverShape = RoundedRectangle(cornerRadius: PUI.Radius.popover, style: .continuous)
+        VStack(alignment: .trailing, spacing: PUI.Space.s) {
+            SectionHeader("Live Preview")
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, PUI.Space.xs)
             HStack {
                 Spacer()
-                MenuBarLabel(store: store, monitor: monitor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(.fill.secondary, in: .rect(cornerRadius: 5))
+                MenuBarItem(highlighted: showsPopover, color: ink.primary) {
+                    MenuBarLabel(store: store, monitor: monitor)
+                }
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, PUI.Space.m)
             .frame(height: 30)
-            .background(.primary.opacity(0.06), in: .rect(cornerRadius: 10))
+            .background(ink.fill, in: .rect(cornerRadius: PUI.Radius.group, style: .continuous))
             if showsPopover {
                 // Scrolls on its own, so a tall popover never forces the window taller.
                 ScrollView {
                     MenuContent(openStatistics: {}, openSettings: {})
-                        .clipShape(.rect(cornerRadius: 12))
-                        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.separator))
+                        .puiGlass(popoverShape)
                         .shadow(color: .black.opacity(0.15), radius: 12, y: 6)
                         .allowsHitTesting(false)
-                        .padding(.vertical, 12)
+                        .padding(.vertical, PUI.Space.l)
                 }
                 .scrollIndicators(.never)
             }
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 88)
+        .padding(.horizontal, PUI.Space.xl + PUI.Space.xs)
+        .padding(.top, PUI.Space.xxl + PUI.Space.xs)
     }
 }
 
