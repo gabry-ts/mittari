@@ -1,6 +1,15 @@
 {
-  "originHash" : "534712ce7a1e7489663893f89f079964b09537d8edb75a77f3925309a7590bd5",
+  "originHash" : "aac62eec1c0e7b91c20899b3e6159e5314f4f8326a4452ba1f6abe9e3aae9dee",
   "pins" : [
+    {
+      "identity" : "partiti-ui",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/gabry-ts/partiti-ui",
+      "state" : {
+        "revision" : "942866162c606c2ddb8a51f88d57755d2de368ff",
+        "version" : "0.2.0"
+      }
+    },
     {
       "identity" : "sparkle",
       "kind" : "remoteSourceControl",
