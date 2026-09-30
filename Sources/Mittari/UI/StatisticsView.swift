@@ -25,22 +25,22 @@ struct StatisticsView: View {
                 SegmentedPill(UsageStats.Range.allCases.map { (value: $0, title: $0.title) }, selection: $range,
                               height: PUI.Control.regular)
 
-                PartitiUI.Card(padding: PUI.Space.xl) {
+                Card(padding: PUI.Space.xl) {
                     HStack(alignment: .top, spacing: PUI.Space.xl) {
-                        PartitiUI.StatTile("Tokens", value: Format.tokens(stats.totals.tokens.total),
+                        StatTile("Tokens", value: Format.tokens(stats.totals.tokens.total),
                                            detail: "\(Format.tokens(stats.totals.tokens.output)) output")
                         divider(ink)
-                        PartitiUI.StatTile("Cost", value: Format.costText(stats.totals), detail: "API list-price equivalent")
+                        StatTile("Cost", value: Format.costText(stats.totals), detail: "API list-price equivalent")
                         divider(ink)
-                        PartitiUI.StatTile(Text("Peak hour"), value: stats.peakHour.map { Format.tokens($0.tokens) } ?? "–",
+                        StatTile(Text("Peak hour"), value: stats.peakHour.map { Format.tokens($0.tokens) } ?? "–",
                                            detail: stats.peakHour.map { Text(verbatim: $0.start.formatted(.dateTime.weekday(.abbreviated).hour().minute())) })
                         divider(ink)
-                        PartitiUI.StatTile(Text("Longest session"), value: stats.longestSession.map { Format.duration($0.duration) } ?? "–",
+                        StatTile(Text("Longest session"), value: stats.longestSession.map { Format.duration($0.duration) } ?? "–",
                                            detail: stats.longestSession.map { Text(verbatim: monitor.report.projectName($0.project)) })
                     }
                 }
 
-                PartitiUI.Card(padding: PUI.Space.xl) {
+                Card(padding: PUI.Space.xl) {
                     VStack(alignment: .leading, spacing: PUI.Space.l) {
                         SectionHeader("Tokens per \(unitName)") {
                             if range.bucket == .hour {
@@ -129,7 +129,7 @@ struct StatisticsView: View {
     }
 
     private func breakdown(_ title: LocalizedStringKey, slices: [Slice], total: Int, colored: Bool) -> some View {
-        PartitiUI.Card(padding: PUI.Space.xl) {
+        Card(padding: PUI.Space.xl) {
             VStack(alignment: .leading, spacing: PUI.Space.m) {
                 SectionHeader(title)
                 if slices.isEmpty {

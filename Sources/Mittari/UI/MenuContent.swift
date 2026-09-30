@@ -49,11 +49,11 @@ struct MenuContent: View {
     private func sectionView(_ section: PopoverSection, report: UsageReport, gauge: Gauge) -> some View {
         switch section {
         case .fiveHour:
-            PartitiUI.Card { fiveHour(gauge) }
+            Card { fiveHour(gauge) }
         case .week:
-            PartitiUI.Card { week(report, gauge: gauge) }
+            Card { week(report, gauge: gauge) }
         case .periods:
-            PartitiUI.Card {
+            Card {
                 HStack(alignment: .top, spacing: PUI.Space.l) {
                     period("Today", report.today)
                     Rectangle().fill(ink.hairline).frame(width: 0.5, height: 52)
@@ -62,12 +62,12 @@ struct MenuContent: View {
             }
         case .models:
             if !report.modelsWeek.isEmpty {
-                PartitiUI.Card { models(report) }
+                Card { models(report) }
             }
         case .projects:
-            PartitiUI.Card { projects(report) }
+            Card { projects(report) }
         case .codex:
-            PartitiUI.Card { codex(report.codex) }
+            Card { codex(report.codex) }
         }
     }
 
@@ -151,7 +151,7 @@ struct MenuContent: View {
     }
 
     private func period(_ title: LocalizedStringKey, _ totals: Totals) -> some View {
-        PartitiUI.StatTile(Text(title), value: Format.tokens(totals.tokens.total),
+        StatTile(Text(title), value: Format.tokens(totals.tokens.total),
                            detail: Text("\(Format.costText(totals)) API equiv."))
             .help(totals.costIsPartial ? "Some usage has no price and is left out. Set prices in Settings." : "API list-price equivalent")
     }
