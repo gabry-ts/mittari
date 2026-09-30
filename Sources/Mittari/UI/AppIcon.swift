@@ -59,3 +59,13 @@ struct AppIconView: View {
         .aspectRatio(1, contentMode: .fit)
     }
 }
+
+extension AppIconView {
+    /// The icon drawn once as an image, for the popover header and About.
+    @MainActor static let image: Image = {
+        let renderer = ImageRenderer(content: AppIconView().frame(width: 256, height: 256))
+        renderer.scale = 1
+        guard let cgImage = renderer.cgImage else { return Image(systemName: "gauge.with.dots.needle.67percent") }
+        return Image(decorative: cgImage, scale: 1)
+    }()
+}

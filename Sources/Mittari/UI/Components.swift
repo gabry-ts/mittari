@@ -1,61 +1,26 @@
-import SwiftUI
 import MittariCore
+import PartitiUI
+import SwiftUI
 
-/// Capsule filled to a percentage, tinted by level.
-struct UsageBar: View {
+/// Partiti UI's meter filled to a percentage. An empty reading shows the bare track,
+/// where the meter alone would still draw a dot.
+struct UsageMeter: View {
     let percent: Double?
-    var color: Color = Theme.amber
+    var color: Color = MittariStyle.accent.color
     var height: CGFloat = 6
 
     var body: some View {
-        GeometryReader { proxy in
-            ZStack(alignment: .leading) {
-                Capsule().fill(.primary.opacity(0.08))
-                if let percent, percent > 0 {
-                    Capsule()
-                        .fill(color.gradient)
-                        .frame(width: max(proxy.size.width * min(percent, 100) / 100, height))
-                }
-            }
-        }
-        .frame(height: height)
+        let fraction = min(max((percent ?? 0) / 100, 0), 1)
+        Meter(fraction, color: fraction > 0 ? color : .clear, height: height)
     }
 }
 
-/// Thin ring gauge with the percentage in the middle.
-struct RingGauge: View {
-    let percent: Double?
-    var color: Color = Theme.amber
-    var size: CGFloat = 64
-    var lineWidth: CGFloat = 6
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .stroke(.primary.opacity(0.08), lineWidth: lineWidth)
-            Circle()
-                .trim(from: 0, to: min(max((percent ?? 0) / 100, 0), 1))
-                .stroke(color.gradient, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-            Text(verbatim: Gauge.percentText(percent))
-                .font(.system(size: size * 0.26, weight: .semibold, design: .rounded))
-                .monospacedDigit()
-        }
-        .frame(width: size, height: size)
-    }
-}
-
-/// Small "est." tag with an explanation on hover.
+/// The "est." badge, with an explanation of the reference on hover.
 struct EstimateBadge: View {
     let mode: LimitMode
 
     var body: some View {
-        Text("est.")
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 1)
-            .background(.primary.opacity(0.07), in: .capsule)
+        Badge("est.", style: .neutral)
             .help(mode.explanation)
     }
 }
@@ -65,25 +30,33 @@ struct SliceRow: View {
     let name: String
     let totals: Totals
     let share: Double
-    var color: Color = Theme.amber
+    var color: Color = MittariStyle.accent.color
+    /// Dims the name, for a row that sums up the rest.
+    var isSummary = false
     var showsCost = true
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 8) {
-                Text(name)
+        let ink = Ink(colorScheme)
+        VStack(spacing: PUI.Space.xs) {
+            HStack(spacing: PUI.Space.s) {
+                Circle().fill(color).frame(width: 6, height: 6)
+                Text(verbatim: name)
+                    .foregroundStyle(isSummary ? ink.secondary : ink.primary)
                     .lineLimit(1)
                     .truncationMode(.middle)
-                Spacer(minLength: 8)
+                Spacer(minLength: PUI.Space.m)
                 Text(verbatim: Format.tokens(totals.tokens.total))
                     .monospacedDigit()
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(ink.primary)
                 if showsCost {
                     CostText(totals: totals)
-                        .frame(minWidth: 52, alignment: .trailing)
+                        .frame(minWidth: 58, alignment: .trailing)
                 }
             }
-            UsageBar(percent: share * 100, color: color, height: 4)
+            .font(PUI.Font.callout)
+            Meter(min(max(share, 0), 1), color: color, height: 4)
+                .padding(.leading, PUI.Space.l)
         }
     }
 }
@@ -91,18 +64,28 @@ struct SliceRow: View {
 /// A cost, marked when it leaves out usage that has no price.
 struct CostText: View {
     let totals: Totals
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
+        let ink = Ink(colorScheme)
         if totals.cost == 0 && totals.costIsPartial {
             Text(verbatim: "—")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ink.secondary)
                 .help("No price for this model. Set prices in Settings.")
         } else {
-            Text(verbatim: Format.cost(totals.cost) + (totals.costIsPartial ? "+" : ""))
+            Text(verbatim: Format.costText(totals))
                 .monospacedDigit()
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ink.secondary)
                 .help(totals.costIsPartial ? "Some usage has no price and is left out. Set prices in Settings." : "API list-price equivalent")
         }
+    }
+}
+
+extension Format {
+    /// A cost with a "+" when some usage has no price, or a dash when none of it has one.
+    static func costText(_ totals: Totals) -> String {
+        if totals.cost == 0 && totals.costIsPartial { return "—" }
+        return cost(totals.cost) + (totals.costIsPartial ? "+" : "")
     }
 }
 
