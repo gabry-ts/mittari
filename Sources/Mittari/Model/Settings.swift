@@ -1,8 +1,9 @@
 import Foundation
 import MittariCore
+import PartitiUI
 
 /// One piece of the status item, shown left to right in list order.
-enum StatusElement: String, Codable, CaseIterable, Hashable {
+enum StatusElement: String, Codable, CaseIterable, Hashable, Identifiable {
     case gauge
     case percent
     case weekGauge
@@ -10,6 +11,8 @@ enum StatusElement: String, Codable, CaseIterable, Hashable {
     case resetTime
     case tokensToday
     case costToday
+
+    var id: String { rawValue }
 
     var title: String {
         switch self {
@@ -74,9 +77,11 @@ enum PopoverSection: String, Codable, CaseIterable {
     }
 }
 
-struct PopoverEntry: Codable, Hashable {
+struct PopoverEntry: Codable, Hashable, Identifiable {
     var section: PopoverSection
     var isEnabled = true
+
+    var id: String { section.rawValue }
 }
 
 /// What the menu bar popover shows, top to bottom in `sections` order.
@@ -89,8 +94,7 @@ struct PopoverSettings: Codable, Hashable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let saved = try c.decodeIfPresent([PopoverEntry].self, forKey: .sections) ?? []
         // Sections added in later versions are appended, enabled.
-        let missing = PopoverSection.allCases.filter { section in !saved.contains { $0.section == section } }
-        sections = saved + missing.map { PopoverEntry(section: $0) }
+        sections = Reorder.normalized(saved, known: PopoverSection.allCases.map { PopoverEntry(section: $0) }, by: \.section)
     }
 }
 
