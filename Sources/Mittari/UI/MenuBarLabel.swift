@@ -1,5 +1,6 @@
 import AppKit
 import MittariCore
+import PartitiUI
 import SwiftUI
 
 /// The status item as a view, for the live preview in settings.
@@ -24,17 +25,8 @@ enum StatusPart: Equatable {
 /// bar text so they match the clock and other system items, rings as inline images.
 @MainActor
 enum StatusImage {
-    /// The system menu bar font, with fixed-width digits so readings don't jitter.
-    static let font: NSFont = {
-        let base = NSFont.menuBarFont(ofSize: 0)
-        let descriptor = base.fontDescriptor.addingAttributes([
-            .featureSettings: [[
-                NSFontDescriptor.FeatureKey.typeIdentifier: kNumberSpacingType,
-                NSFontDescriptor.FeatureKey.selectorIdentifier: kMonospacedNumbersSelector,
-            ]],
-        ])
-        return NSFont(descriptor: descriptor, size: base.pointSize) ?? base
-    }()
+    /// Partiti UI's menu bar type: medium, with fixed-width digits so readings don't jitter.
+    static let font: NSFont = PUI.Font.menuBarNSFont()
 
     /// Reads every observable input up front, so observation tracking around this call
     /// sees them all.
@@ -100,8 +92,8 @@ enum StatusImage {
             // Resolved at draw time, so the default follows the menu bar's appearance.
             let color: NSColor = switch level {
             case .normal: tint ?? .labelColor
-            case .warning: NSColor(Theme.warning)
-            case .critical: NSColor(Theme.critical)
+            case .warning: NSColor(MittariStyle.warning)
+            case .critical: NSColor(MittariStyle.critical)
             }
             let lineWidth: CGFloat = 2.2
             let center = NSPoint(x: rect.midX, y: rect.midY)
