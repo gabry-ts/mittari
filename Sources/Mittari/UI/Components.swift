@@ -2,21 +2,6 @@ import MittariCore
 import PartitiUI
 import SwiftUI
 
-/// Partiti UI's meter filled to a percentage. An empty reading shows the bare track,
-/// where the meter alone would still draw a dot.
-struct UsageMeter: View {
-    let percent: Double?
-    var color: Color = MittariStyle.accent.color
-    var height: CGFloat = 6
-    /// Thresholds to notch on the track, in percent.
-    var marks: [Double] = []
-
-    var body: some View {
-        let fraction = min(max((percent ?? 0) / 100, 0), 1)
-        Meter(fraction, color: fraction > 0 ? color : .clear, height: height, marks: marks.map { $0 / 100 })
-    }
-}
-
 /// The "est." badge, with an explanation of the reference on hover.
 struct EstimateBadge: View {
     let mode: LimitMode

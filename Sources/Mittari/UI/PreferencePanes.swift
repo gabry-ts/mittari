@@ -181,7 +181,7 @@ private struct ThresholdPreview: View {
             ring(min(critical + (100 - critical) / 2, 100), "Critical", .critical, ink)
             Spacer(minLength: PUI.Space.l)
             VStack(alignment: .trailing, spacing: PUI.Space.xs) {
-                UsageMeter(percent: percent, color: MittariStyle.color(Gauge.level(percent, limits: limits)), marks: [warning, critical])
+                Meter((percent ?? 0) / 100, color: MittariStyle.color(Gauge.level(percent, limits: limits)), marks: [warning / 100, critical / 100])
                     .frame(width: meterWidth)
                 ZStack(alignment: .leading) {
                     tick("0%", at: 0)

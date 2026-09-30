@@ -140,7 +140,7 @@ struct MenuContent: View {
                     .monospacedDigit()
                     .foregroundStyle(ink.primary)
             }
-            UsageMeter(percent: gauge.weekPercent, color: MittariStyle.color(Gauge.level(gauge.weekPercent, limits: store.settings.limits)))
+            Meter((gauge.weekPercent ?? 0) / 100, color: MittariStyle.color(Gauge.level(gauge.weekPercent, limits: store.settings.limits)))
             HStack {
                 caption("\(Format.tokens(report.week.tokens.total)) tokens")
                 Spacer()
@@ -223,8 +223,8 @@ struct MenuContent: View {
                                 .monospacedDigit()
                                 .foregroundStyle(ink.primary)
                         }
-                        UsageMeter(percent: primary.usedPercent,
-                                   color: MittariStyle.color(Gauge.level(primary.usedPercent, limits: store.settings.limits)), height: 4)
+                        Meter(primary.usedPercent / 100,
+                              color: MittariStyle.color(Gauge.level(primary.usedPercent, limits: store.settings.limits)), height: 4)
                         caption("as of \(limits.observedAt.formatted(date: .abbreviated, time: .shortened))")
                     }
                 }
