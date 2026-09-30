@@ -89,33 +89,6 @@ extension Format {
     }
 }
 
-/// A label over a large value, for summary tiles.
-struct StatTile: View {
-    let title: String
-    let value: String
-    var detail: String?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-            Text(verbatim: value)
-                .font(.system(size: 22, weight: .semibold, design: .rounded))
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            if let detail {
-                Text(verbatim: detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
 extension SettingsStore {
     func binding<T>(_ keyPath: WritableKeyPath<Settings, T>) -> Binding<T> {
         Binding(
