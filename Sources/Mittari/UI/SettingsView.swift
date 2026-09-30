@@ -1,19 +1,21 @@
 import MittariCore
 import Observation
+import PartitiUI
 import SwiftUI
 
 /// Which page the main window shows, so the popover can open it on a given page.
 @MainActor
 @Observable
 final class Navigation {
-    var pane: SettingsView.Pane?
+    var pane: SettingsView.Pane
 
     init(pane: SettingsView.Pane = .statistics) {
         self.pane = pane
     }
 }
 
-/// The main window: statistics first, then every settings page, in one sidebar.
+/// The main window: statistics first, then every settings page, in Partiti UI's floating
+/// sidebar.
 struct SettingsView: View {
     @Bindable var navigation: Navigation
     /// Models whose price history starts expanded, for snapshots.
@@ -27,6 +29,7 @@ struct SettingsView: View {
         case limits
         case prices
         case data
+        case about
 
         var title: String {
             switch self {
@@ -37,19 +40,39 @@ struct SettingsView: View {
             case .limits: "Limits"
             case .prices: "Prices"
             case .data: "Data"
+            case .about: "About"
             }
         }
 
         var icon: String {
             switch self {
             case .statistics: "chart.bar.xaxis"
-            case .general: "gearshape"
+            case .general: "gearshape.fill"
             case .menuBar: "menubar.rectangle"
-            case .popover: "rectangle.stack"
+            case .popover: "rectangle.stack.fill"
             case .limits: "gauge.with.dots.needle.67percent"
-            case .prices: "dollarsign.circle"
-            case .data: "folder"
+            case .prices: "dollarsign"
+            case .data: "folder.fill"
+            case .about: "info"
             }
+        }
+
+        /// The tile color behind the icon, as in System Settings.
+        var tint: Color {
+            switch self {
+            case .statistics: MittariStyle.accent.color
+            case .general: .gray
+            case .menuBar: .blue
+            case .popover: .indigo
+            case .limits: .orange
+            case .prices: .green
+            case .data: .cyan
+            case .about: .teal
+            }
+        }
+
+        var sidebarItem: SidebarItem {
+            SidebarItem(Text(verbatim: title), id: rawValue, symbol: icon, style: .tile(tint))
         }
     }
 
@@ -58,42 +81,28 @@ struct SettingsView: View {
         self.expandedModels = expandedModels
     }
 
+    private static let sections: [SidebarSection] = [
+        SidebarSection(nil, [Pane.statistics.sidebarItem]),
+        SidebarSection("Settings", [Pane.general, .menuBar, .popover].map(\.sidebarItem)),
+        SidebarSection("Usage", [Pane.limits, .prices, .data].map(\.sidebarItem)),
+        SidebarSection(nil, [Pane.about.sidebarItem]),
+    ]
+
     var body: some View {
-        NavigationSplitView {
-            List(selection: $navigation.pane) {
-                Section {
-                    paneRow(.statistics)
-                }
-                Section("Settings") {
-                    ForEach([Pane.general, .menuBar, .popover], id: \.self, content: paneRow)
-                }
-                Section("Usage") {
-                    ForEach([Pane.limits, .prices, .data], id: \.self, content: paneRow)
-                }
-            }
-            .scrollContentBackground(.hidden)
-            .background(AirBackground())
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-        } detail: {
-            detail
+        SettingsWindow(sections: Self.sections, selection: selection) {
+            paneView(navigation.pane)
         }
-        .frame(minWidth: 900, minHeight: 600)
-        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+        .frame(minWidth: PUI.Window.dashboardMin.width, minHeight: PUI.Window.dashboardMin.height)
+        .puiAccent(MittariStyle.accent)
     }
 
-    private func paneRow(_ pane: Pane) -> some View {
-        Label(pane.title, systemImage: pane.icon)
-            .tag(pane)
-    }
-
-    @ViewBuilder
-    private var detail: some View {
-        if let pane = navigation.pane {
-            paneView(pane)
-                .navigationTitle(pane.title)
-        } else {
-            ContentUnavailableView("Select a Section", systemImage: "sidebar.left")
-        }
+    /// The sidebar selects by the pane's raw value, the id of its item.
+    private var selection: Binding<String> {
+        Binding(
+            get: { navigation.pane.rawValue },
+            set: { id in
+                if let pane = Pane(rawValue: id) { navigation.pane = pane }
+            })
     }
 
     @ViewBuilder
@@ -106,6 +115,25 @@ struct SettingsView: View {
         case .limits: LimitsView()
         case .prices: PricesView(expanded: expandedModels)
         case .data: DataView()
+        case .about: AboutView()
         }
+    }
+}
+
+/// A scrolling settings pane opening with Partiti UI's header for `pane`.
+struct MittariPane<Content: View>: View {
+    let pane: SettingsView.Pane
+    let subtitle: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        ScrollView {
+            SettingsPane {
+                PaneHeader(pane.title, subtitle: subtitle, symbol: pane.icon, color: pane.tint)
+            } content: {
+                content
+            }
+        }
+        .scrollBounceBehavior(.basedOnSize)
     }
 }

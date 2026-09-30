@@ -1,5 +1,6 @@
 import AppKit
 import MittariCore
+import PartitiUI
 import SwiftUI
 
 /// `Mittari --render-snapshots <dir>` renders the popover, statistics and every
@@ -24,10 +25,10 @@ enum Snapshots {
             snapFitting(MenuContent(openStatistics: {}, openSettings: {}).environment(store).environment(monitor),
                         name: "popover-\(suffix)", dark: dark, dir: dir)
             snapWindow(SettingsView(navigation: Navigation(pane: .statistics)).environment(store).environment(monitor),
-                       name: "statistics-\(suffix)", size: NSSize(width: 1080, height: 980), dark: dark, dir: dir)
+                       name: "statistics-\(suffix)", size: NSSize(width: PUI.Window.dashboard.width, height: 980), dark: dark, dir: dir)
             for pane in SettingsView.Pane.allCases where pane != .statistics {
                 snapWindow(SettingsView(navigation: Navigation(pane: pane), expandedModels: ["claude-opus-5"]).environment(store).environment(monitor),
-                           name: "settings-\(pane.rawValue)-\(suffix)", size: NSSize(width: 1080, height: 700), dark: dark, dir: dir,
+                           name: "settings-\(pane.rawValue)-\(suffix)", size: PUI.Window.dashboard, dark: dark, dir: dir,
                            growToContent: true)
             }
         }

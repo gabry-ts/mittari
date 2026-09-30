@@ -1,4 +1,5 @@
 import MittariCore
+import PartitiUI
 import SwiftUI
 
 @main
@@ -122,16 +123,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let view = SettingsView(navigation: navigation)
             .environment(store)
             .environment(monitor)
-        let window = makeWindow(view, size: NSSize(width: 1080, height: 760), minSize: NSSize(width: 900, height: 600))
+        let window = makeWindow(view, size: PUI.Window.dashboard, minSize: PUI.Window.dashboardMin)
         self.window = window
         window.makeKeyAndOrderFront(nil)
     }
 
-    /// One continuous surface: the backdrop runs under a clear title bar, and each page
-    /// carries its own large title.
+    /// A full-size content view under a clear title bar, so Partiti UI's floating sidebar
+    /// runs under the traffic lights and each pane carries its own header.
     private func makeWindow(_ view: some View, size: NSSize, minSize: NSSize) -> NSWindow {
         let controller = NSHostingController(rootView: view)
-        controller.sceneBridgingOptions = [.toolbars]
         let window = NSWindow(contentViewController: controller)
         window.title = "Mittari"
         window.isOpaque = false

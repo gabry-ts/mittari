@@ -18,8 +18,8 @@ struct StatisticsView: View {
         let ink = Ink(colorScheme)
         ScrollView {
             VStack(alignment: .leading, spacing: PUI.Space.l) {
-                PaneHeader("Statistics", subtitle: "Claude Code usage from your local transcripts. Costs are API list-price equivalents.",
-                           symbol: "chart.bar.xaxis", color: MittariStyle.accent.color)
+                PaneHeader(SettingsView.Pane.statistics.title, subtitle: "Claude Code usage from your local transcripts. Costs are API list-price equivalents.",
+                           symbol: SettingsView.Pane.statistics.icon, color: SettingsView.Pane.statistics.tint)
                     .padding(.bottom, PUI.Space.xs)
 
                 SegmentedPill(UsageStats.Range.allCases.map { (value: $0, title: $0.title) }, selection: $range,

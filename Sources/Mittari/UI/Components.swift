@@ -8,10 +8,12 @@ struct UsageMeter: View {
     let percent: Double?
     var color: Color = MittariStyle.accent.color
     var height: CGFloat = 6
+    /// Thresholds to notch on the track, in percent.
+    var marks: [Double] = []
 
     var body: some View {
         let fraction = min(max((percent ?? 0) / 100, 0), 1)
-        Meter(fraction, color: fraction > 0 ? color : .clear, height: height)
+        Meter(fraction, color: fraction > 0 ? color : .clear, height: height, marks: marks.map { $0 / 100 })
     }
 }
 

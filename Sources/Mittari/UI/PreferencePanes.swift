@@ -1,60 +1,42 @@
 import MittariCore
+import PartitiUI
 import SwiftUI
 
 struct GeneralView: View {
     @Environment(SettingsStore.self) private var store
     @State private var launchAtLogin = LoginItem.status == .enabled
-    @State private var automaticallyChecksForUpdates = Updater.automaticallyChecksForUpdates
 
     var body: some View {
         @Bindable var store = store
-        Form {
-            Section("General") {
-                Toggle("Launch at login", isOn: $launchAtLogin)
-                    .onChange(of: launchAtLogin) { _, enabled in
-                        enabled ? LoginItem.register() : LoginItem.unregister()
-                    }
+        MittariPane(pane: .general, subtitle: "Startup and how often the logs are read again.") {
+            SettingsGroup("Startup") {
+                SettingsRow("Launch at login") {
+                    Toggle("Launch at login", isOn: $launchAtLogin)
+                        .toggleStyle(PUISwitchStyle(showsLabel: false))
+                }
                 if LoginItem.status == .requiresApproval {
-                    Button("Approve in System Settings…") { LoginItem.openSystemSettings() }
-                }
-            }
-            Section {
-                Picker("Rescan every", selection: $store.settings.refreshInterval) {
-                    Text("30 s").tag(30.0)
-                    Text("1 min").tag(60.0)
-                    Text("2 min").tag(120.0)
-                    Text("5 min").tag(300.0)
-                }
-            } header: {
-                Text("Refresh")
-            } footer: {
-                Text("New lines in the logs are picked up within a few seconds of being written. The periodic rescan is a fallback, and only reads what changed.")
-                    .foregroundStyle(.secondary)
-            }
-            Section {
-                Toggle("Automatically check for updates", isOn: $automaticallyChecksForUpdates)
-                    .onChange(of: automaticallyChecksForUpdates) { _, enabled in
-                        Updater.automaticallyChecksForUpdates = enabled
+                    SettingsRow("Waiting for your approval in System Settings") {
+                        Button("Approve in System Settings…") { LoginItem.openSystemSettings() }
+                            .buttonStyle(SecondaryButtonStyle(height: PUI.Control.small))
                     }
-                Button("Check for Updates Now…") { Updater.checkForUpdates() }
-            } header: {
-                Text("Updates")
-            } footer: {
-                Text("Mittari asks once, the first time it can check, whether to check automatically from then on.")
-                    .foregroundStyle(.secondary)
+                }
             }
-            Section {
-                LabeledContent("Version", value: AppVersion.string)
-                Button("Buy Me a Coffee…") { ExternalLinks.openBuyMeACoffee() }
-                    .buttonStyle(.link)
-                    .foregroundStyle(.secondary)
-            } header: {
-                Text("About")
+            .onChange(of: launchAtLogin) { _, enabled in
+                enabled ? LoginItem.register() : LoginItem.unregister()
+            }
+            SettingsGroup("Refresh", footer: "New lines in the logs are picked up within a few seconds of being written. The periodic rescan is a fallback, and only reads what changed.") {
+                SettingsRow("Rescan every") {
+                    Picker("Rescan every", selection: $store.settings.refreshInterval) {
+                        Text("30 s").tag(30.0)
+                        Text("1 min").tag(60.0)
+                        Text("2 min").tag(120.0)
+                        Text("5 min").tag(300.0)
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                }
             }
         }
-        .formStyle(.grouped)
-        .scrollContentBackground(.hidden)
-        .background(AirBackground())
     }
 }
 
@@ -67,55 +49,194 @@ enum AppVersion {
     }
 }
 
+/// Partiti UI's About pane: the icon, a line about Mittari and the version, updates,
+/// and a way to support it.
+struct AboutView: View {
+    @State private var automaticallyChecksForUpdates = Updater.automaticallyChecksForUpdates
+
+    var body: some View {
+        ScrollView {
+            AboutPane(
+                brand: PartitiBrand(
+                    accent: MittariStyle.accent,
+                    tagline: "Claude Code and Codex usage in your menu bar",
+                    coffeeLine: "Mittari is free. If it helps you keep an eye on your limits, you can buy me a coffee.",
+                    icon: AppIconView.image),
+                version: "Version \(AppVersion.string)",
+                checksAutomatically: $automaticallyChecksForUpdates,
+                onCheckForUpdates: { Updater.checkForUpdates() },
+                onBuyMeACoffee: { ExternalLinks.openBuyMeACoffee() })
+                .padding(.top, 44)
+                .padding(.horizontal, PUI.Space.xxl)
+                .padding(.bottom, PUI.Space.xxl)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .onChange(of: automaticallyChecksForUpdates) { _, enabled in
+            Updater.automaticallyChecksForUpdates = enabled
+        }
+    }
+}
+
 struct LimitsView: View {
     @Environment(SettingsStore.self) private var store
     @Environment(UsageMonitor.self) private var monitor
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         @Bindable var store = store
         let report = monitor.report
-        Form {
-            Section {
-                Picker("100% is", selection: $store.settings.limits.mode) {
-                    Text("Auto: your busiest earlier 5-hour window in the last 30 days").tag(LimitMode.auto)
-                    Text("Custom token budgets").tag(LimitMode.custom)
+        let limits = store.settings.limits
+        MittariPane(pane: .limits, subtitle: "What 100% means, and when the ring changes color.") {
+            SettingsGroup("100% is", footer: "Claude plan limits aren't written to the logs, so percentages are estimates against this reference. In Auto, the window or week in progress is left out of the reference, so a new record reads above 100%. Tokens include cache reads and writes, as in ccusage.") {
+                RadioRow("Auto", subtitle: "Your busiest earlier 5-hour window in the last 30 days", isOn: limits.mode == .auto) {
+                    store.settings.limits.mode = .auto
                 }
-                .pickerStyle(.radioGroup)
-                if store.settings.limits.mode == .auto {
-                    LabeledContent("Busiest earlier 5-hour window", value: report.busiestBlockTokens > 0 ? "\(Format.tokens(report.busiestBlockTokens)) tokens" : "Not enough history yet")
-                    LabeledContent("Busiest earlier 7 days", value: report.busiestWeekTokens > 0 ? "\(Format.tokens(report.busiestWeekTokens)) tokens" : "Not enough history yet")
+                RadioRow("Custom token budgets", subtitle: "Set the 5-hour and weekly budgets yourself, in millions of tokens", isOn: limits.mode == .custom) {
+                    store.settings.limits.mode = .custom
+                }
+                if limits.mode == .auto {
+                    SettingsRow("Busiest earlier 5-hour window") {
+                        ValueText(report.busiestBlockTokens > 0 ? "\(Format.tokens(report.busiestBlockTokens)) tokens" : "Not enough history yet")
+                    }
+                    SettingsRow("Busiest earlier 7 days") {
+                        ValueText(report.busiestWeekTokens > 0 ? "\(Format.tokens(report.busiestWeekTokens)) tokens" : "Not enough history yet")
+                    }
                 } else {
                     MillionsField(title: "5-hour window budget", tokens: $store.settings.limits.fiveHourTokens)
                     MillionsField(title: "Weekly budget", tokens: $store.settings.limits.weeklyTokens)
-                    Button("Start from Auto Values") {
-                        if report.busiestBlockTokens > 0 { store.settings.limits.fiveHourTokens = report.busiestBlockTokens }
-                        if report.busiestWeekTokens > 0 { store.settings.limits.weeklyTokens = report.busiestWeekTokens }
+                    SettingsRow("Start from your busiest earlier window and week") {
+                        Button("Start from Auto Values") {
+                            if report.busiestBlockTokens > 0 { store.settings.limits.fiveHourTokens = report.busiestBlockTokens }
+                            if report.busiestWeekTokens > 0 { store.settings.limits.weeklyTokens = report.busiestWeekTokens }
+                        }
+                        .buttonStyle(SecondaryButtonStyle(height: PUI.Control.small))
                     }
                 }
-            } header: {
-                Text("Limits")
-            } footer: {
-                Text("Claude plan limits aren't written to the logs, so percentages are estimates against this reference. In Auto, the window or week in progress is left out of the reference, so a new record reads above 100%. Tokens include cache reads and writes, as in ccusage.")
-                    .foregroundStyle(.secondary)
             }
 
-            Section {
+            SettingsGroup("Thresholds", footer: "The menu bar ring turns orange at the warning threshold and red at the critical one. You get at most one notification per level and window.") {
+                ThresholdPreview(limits: limits, percent: Gauge(report: report, limits: limits, now: monitor.now).fiveHourPercent)
                 PercentSlider(title: "Warning at", percent: $store.settings.limits.warningPercent, range: 50...95)
                 PercentSlider(title: "Critical at", percent: $store.settings.limits.criticalPercent, range: 60...100)
-                Toggle("Notify when the 5-hour window crosses a threshold", isOn: $store.settings.limits.notify)
-            } header: {
-                Text("Thresholds")
-            } footer: {
-                Text("The menu bar ring turns orange at the warning threshold and red at the critical one. You get at most one notification per level and window.")
-                    .foregroundStyle(.secondary)
+                SettingsRow("Notify when the 5-hour window crosses a threshold") {
+                    Toggle("Notify when the 5-hour window crosses a threshold", isOn: $store.settings.limits.notify)
+                        .toggleStyle(PUISwitchStyle(showsLabel: false))
+                }
             }
         }
-        .formStyle(.grouped)
-        .scrollContentBackground(.hidden)
-        .background(AirBackground())
         .onChange(of: store.settings.limits.warningPercent) { _, warning in
             if store.settings.limits.criticalPercent < warning { store.settings.limits.criticalPercent = warning }
         }
+    }
+}
+
+/// A value on the right of a settings row, in secondary body text.
+struct ValueText: View {
+    let text: String
+    @Environment(\.colorScheme) private var colorScheme
+
+    init(_ text: String) { self.text = text }
+
+    var body: some View {
+        Text(verbatim: text)
+            .font(PUI.Font.body)
+            .monospacedDigit()
+            .foregroundStyle(Ink(colorScheme).secondary)
+    }
+}
+
+/// One choice of a radio group inside a settings group, with the mark in the accent.
+private struct RadioRow: View {
+    let title: LocalizedStringKey
+    let subtitle: LocalizedStringKey
+    let isOn: Bool
+    let select: () -> Void
+    @Environment(\.puiAccent) private var accent
+    @Environment(\.colorScheme) private var colorScheme
+
+    init(_ title: LocalizedStringKey, subtitle: LocalizedStringKey, isOn: Bool, select: @escaping () -> Void) {
+        self.title = title
+        self.subtitle = subtitle
+        self.isOn = isOn
+        self.select = select
+    }
+
+    var body: some View {
+        let ink = Ink(colorScheme)
+        Button(action: select) {
+            HStack(spacing: PUI.Space.m + 2) {
+                Circle()
+                    .strokeBorder(isOn ? accent.color : ink.tertiary, lineWidth: isOn ? 5 : 1.2)
+                    .frame(width: 16, height: 16)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title).font(PUI.Font.body).foregroundStyle(ink.primary)
+                    Text(subtitle).font(PUI.Font.caption).foregroundStyle(ink.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, PUI.Space.l)
+            .padding(.vertical, PUI.Space.m)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isOn ? [.isButton, .isSelected] : .isButton)
+    }
+}
+
+/// The three levels as small rings, and the thresholds marked on a meter filled to the
+/// current 5-hour window.
+private struct ThresholdPreview: View {
+    let limits: LimitSettings
+    let percent: Double?
+    @Environment(\.colorScheme) private var colorScheme
+
+    private let meterWidth: CGFloat = 220
+
+    var body: some View {
+        let ink = Ink(colorScheme)
+        let warning = limits.warningPercent
+        let critical = max(limits.criticalPercent, warning)
+        HStack(spacing: PUI.Space.xxl) {
+            ring(max(warning - 15, 0), "Normal", .normal, ink)
+            ring((warning + critical) / 2, "Warning", .warning, ink)
+            ring(min(critical + (100 - critical) / 2, 100), "Critical", .critical, ink)
+            Spacer(minLength: PUI.Space.l)
+            VStack(alignment: .trailing, spacing: PUI.Space.xs) {
+                UsageMeter(percent: percent, color: MittariStyle.color(Gauge.level(percent, limits: limits)), marks: [warning, critical])
+                    .frame(width: meterWidth)
+                ZStack(alignment: .leading) {
+                    tick("0%", at: 0)
+                    tick("\(Int(warning))%", at: warning)
+                    tick("\(Int(critical))%", at: critical)
+                }
+                .font(PUI.Font.caption)
+                .monospacedDigit()
+                .foregroundStyle(ink.tertiary)
+                .frame(width: meterWidth, height: 14, alignment: .leading)
+            }
+        }
+        .padding(PUI.Space.l)
+    }
+
+    private func ring(_ value: Double, _ name: LocalizedStringKey, _ level: Gauge.Level, _ ink: Ink) -> some View {
+        VStack(spacing: PUI.Space.s) {
+            GaugeRing(value / 100, color: MittariStyle.color(level), lineWidth: 5, size: 44) {
+                Text(verbatim: "\(Int(value.rounded()))%")
+                    .font(PUI.Font.label)
+                    .monospacedDigit()
+                    .foregroundStyle(ink.primary)
+            }
+            Text(name).font(PUI.Font.caption).foregroundStyle(ink.secondary)
+        }
+    }
+
+    /// A label centered under `percent` of the meter, kept inside its ends.
+    private func tick(_ text: String, at percent: Double) -> some View {
+        Text(verbatim: text)
+            .fixedSize()
+            .frame(width: 32)
+            .offset(x: min(max(meterWidth * percent / 100 - 16, -8), meterWidth - 24))
     }
 }
 
@@ -123,10 +244,11 @@ struct LimitsView: View {
 private struct MillionsField: View {
     let title: String
     @Binding var tokens: Int
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        LabeledContent(title) {
-            HStack(spacing: 6) {
+        SettingsRow(title) {
+            HStack(spacing: PUI.Space.s) {
                 TextField(title, value: Binding(
                     get: { Double(tokens) / 1_000_000 },
                     set: { tokens = max(Int(($0 * 1_000_000).rounded()), 1) }
@@ -135,27 +257,31 @@ private struct MillionsField: View {
                 .multilineTextAlignment(.trailing)
                 .frame(width: 90)
                 Text("million tokens")
-                    .foregroundStyle(.secondary)
+                    .font(PUI.Font.body)
+                    .foregroundStyle(Ink(colorScheme).secondary)
             }
         }
     }
 }
 
+/// A threshold in steps of 5%, on Partiti UI's slider.
 struct PercentSlider: View {
     let title: String
     @Binding var percent: Double
     var range: ClosedRange<Double> = 0...100
 
     var body: some View {
-        LabeledContent(title) {
-            HStack {
-                Slider(value: $percent, in: range, step: 5)
-                    .tint(Theme.amber)
-                Text("\(Int(percent))%")
-                    .monospacedDigit()
+        SettingsRow(title) {
+            HStack(spacing: PUI.Space.m) {
+                PUISlider(value: Binding(
+                    get: { percent },
+                    set: { percent = min(max(($0 / 5).rounded() * 5, range.lowerBound), range.upperBound) }
+                ), in: range)
+                .frame(width: 220)
+                .accessibilityLabel(title)
+                ValueText("\(Int(percent))%")
                     .frame(width: 44, alignment: .trailing)
             }
-            .frame(maxWidth: 300)
         }
     }
 }
@@ -164,56 +290,45 @@ struct DataView: View {
     @Environment(UsageMonitor.self) private var monitor
 
     var body: some View {
-        Form {
-            Section {
+        MittariPane(pane: .data, subtitle: "Where Mittari reads usage from, and what it found.") {
+            SettingsGroup("Folders", footer: "Claude Code transcripts in every projects folder found ($CLAUDE_CONFIG_DIR, ~/.config/claude, ~/.claude), and Codex sessions. Mittari only reads these files: it never writes to them and makes no network connections.") {
                 ForEach(monitor.folders, id: \.url) { folder in
-                    LabeledContent {
-                        HStack(spacing: 8) {
+                    SettingsRow(displayPath(folder.url)) {
+                        HStack(spacing: PUI.Space.m) {
                             if folder.exists {
-                                Text("\(folder.fileCount) files")
-                                    .monospacedDigit()
-                                    .foregroundStyle(.secondary)
+                                ValueText("\(folder.fileCount) files")
                                 Button("Show") { NSWorkspace.shared.open(folder.url) }
+                                    .buttonStyle(SecondaryButtonStyle(height: PUI.Control.small))
                             } else {
-                                Text("Not found")
-                                    .foregroundStyle(.tertiary)
+                                ValueText("Not found")
                             }
                         }
-                    } label: {
-                        Text(verbatim: displayPath(folder.url))
-                            .lineLimit(1)
-                            .truncationMode(.middle)
                     }
                 }
-            } header: {
-                Text("Folders")
-            } footer: {
-                Text("Claude Code transcripts in every projects folder found ($CLAUDE_CONFIG_DIR, ~/.config/claude, ~/.claude), and Codex sessions. Mittari only reads these files: it never writes to them and makes no network connections.")
-                    .foregroundStyle(.secondary)
             }
 
-            Section {
-                LabeledContent("Claude Code messages", value: "\(monitor.entryCount.formatted()) in the last year")
-                LabeledContent("Codex sessions", value: "\(monitor.report.codex.sessionCount) in the last year")
+            SettingsGroup("Parsed", footer: "Rescan forgets what was read and parses every recent file again. Duplicated messages are counted once.") {
+                SettingsRow("Claude Code messages") {
+                    ValueText("\(monitor.entryCount.formatted()) in the last year")
+                }
+                SettingsRow("Codex sessions") {
+                    ValueText("\(monitor.report.codex.sessionCount) in the last year")
+                }
                 if let last = monitor.lastScan {
-                    LabeledContent("Last scan", value: "\(last.formatted(date: .omitted, time: .standard)), full scan took \(String(format: "%.1f", monitor.lastScanDuration)) s")
+                    SettingsRow("Last scan") {
+                        ValueText("\(last.formatted(date: .omitted, time: .standard)), full scan took \(String(format: "%.1f", monitor.lastScanDuration)) s")
+                    }
                 }
-                HStack {
-                    Spacer()
-                    if monitor.isScanning { ProgressView().controlSize(.small) }
-                    Button("Rescan") { monitor.rescan() }
-                        .disabled(monitor.isScanning)
+                SettingsRow("Read every recent file again") {
+                    HStack(spacing: PUI.Space.m) {
+                        if monitor.isScanning { ProgressView().controlSize(.small) }
+                        Button("Rescan") { monitor.rescan() }
+                            .buttonStyle(SecondaryButtonStyle(height: PUI.Control.small))
+                            .disabled(monitor.isScanning)
+                    }
                 }
-            } header: {
-                Text("Parsed")
-            } footer: {
-                Text("Rescan forgets what was read and parses every recent file again. Duplicated messages are counted once.")
-                    .foregroundStyle(.secondary)
             }
         }
-        .formStyle(.grouped)
-        .scrollContentBackground(.hidden)
-        .background(AirBackground())
     }
 
     private func displayPath(_ url: URL) -> String {
