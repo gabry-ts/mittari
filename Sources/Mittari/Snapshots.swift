@@ -119,7 +119,8 @@ enum Snapshots {
 
     /// Renders a view on a borderless window sized to fit its content, like the popover.
     private static func snapFitting(_ view: some View, name: String, dark: Bool, dir: URL) {
-        let controller = NSHostingController(rootView: view)
+        // The popover's own glass comes from NSPopover, so it's painted in here.
+        let controller = NSHostingController(rootView: view.puiGlass(Rectangle()).partitiSnapshot())
         let window = NSWindow(contentViewController: controller)
         window.styleMask = [.borderless]
         window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
@@ -128,8 +129,7 @@ enum Snapshots {
     }
 
     private static func snapWindow(_ view: some View, name: String, size: NSSize, dark: Bool, dir: URL, growToContent: Bool = false) {
-        let controller = NSHostingController(rootView: view)
-        controller.sceneBridgingOptions = [.toolbars]
+        let controller = NSHostingController(rootView: view.partitiSnapshot())
         let window = NSWindow(contentViewController: controller)
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
         window.titlebarAppearsTransparent = true
@@ -137,8 +137,8 @@ enum Snapshots {
         window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         window.setContentSize(size)
         if growToContent {
-            // Forms are List-backed, so grow the window to the tallest scroll view's
-            // document height and long panes aren't cropped.
+            // Panes scroll, so grow the window to the tallest scroll view's document
+            // height and long panes aren't cropped.
             window.setFrameOrigin(NSPoint(x: -6000, y: -6000))
             window.orderFrontRegardless()
             RunLoop.main.run(until: Date().addingTimeInterval(0.6))
@@ -287,5 +287,12 @@ private enum SampleData {
             sessions.append(parser.session)
         }
         return sessions
+    }
+}
+
+private extension View {
+    /// Mittari's accent, with glass painted so snapshots match the running app.
+    func partitiSnapshot() -> some View {
+        puiAccent(MittariStyle.accent).puiGlassRendering(.painted)
     }
 }
